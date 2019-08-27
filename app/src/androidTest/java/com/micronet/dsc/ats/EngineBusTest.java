@@ -5,18 +5,15 @@
 
 package com.micronet.dsc.ats;
 
-import android.test.AndroidTestCase;
+import org.junit.Test;
 
-/**
- * Created by dschmidt on 2/1/16.
- */
-public class EngineBusTest extends AndroidTestCase{
+import static org.junit.Assert.*;
 
+public class EngineBusTest {
     // Most of the functions in EngineBus class are tested in the EngineBus sub-classes (J1587Test and J1939Test)
 
-    public void test_littleEndian2Long() {
-
-
+    @Test
+    public void testLittleEndian2Long() {
         byte[] inputBytes = new byte[]{1, -2, 3, -4, 5, -6, 7, -8};
 
         long resultLong;
@@ -35,8 +32,8 @@ public class EngineBusTest extends AndroidTestCase{
 
     } // test_littleEndian2Long()
 
-
-    public void test_long2LittleEndian() {
+    @Test
+    public void testLong2LittleEndian() {
         byte[] resultBytes = new byte[8];
 
         EngineBus.long2LittleEndian(-1, resultBytes, 0, 8);
@@ -53,6 +50,4 @@ public class EngineBusTest extends AndroidTestCase{
         assertEquals(Log.bytesToHex(resultBytes, 8), "00000000F302F1F0");
 
     } // test_long2LittleEndian()
-
-
 } // class

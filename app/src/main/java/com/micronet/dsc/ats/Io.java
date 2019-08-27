@@ -16,10 +16,19 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.os.PowerManager;
 import android.os.SystemClock;
+
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+
+import static android.content.Intent.EXTRA_DOCK_STATE_CAR;
+import static android.content.Intent.EXTRA_DOCK_STATE_DESK;
+import static android.content.Intent.EXTRA_DOCK_STATE_HE_DESK;
+import static android.content.Intent.EXTRA_DOCK_STATE_LE_DESK;
+import static android.content.Intent.EXTRA_DOCK_STATE_UNDOCKED;
 
 
 public class Io {
@@ -41,8 +50,8 @@ public class Io {
         if(BuildConfig.FLAVOR_DEVICE.equals(MainService.BUILD_FLAVOR_OBC5)) {
             MAX_GP_INPUTS_SUPPORTED = 7;
         }
-        else { // A317
-            MAX_GP_INPUTS_SUPPORTED = 6;
+        else { // TAB8
+            MAX_GP_INPUTS_SUPPORTED = 7;
         }
     }
 
@@ -52,6 +61,7 @@ public class Io {
     public static final String DEFAULT_SERIAL_NUMBER = "00000000"; // used if we can't determine the serial number of device
 
     public static AtomicLong lastDockStateChange = new AtomicLong(0);
+    public static AtomicInteger ignitionState = new AtomicInteger(-1);
 
     //private static boolean USE_INPUT6_AS_IGNITION = false; // are we currently using input6 as the ignition line?
 
@@ -1117,8 +1127,10 @@ public class Io {
     IoServiceHardwareWrapper.HardwareInputResults parseReceivedHardwareInputs(Intent intent) {
         IoServiceHardwareWrapper.HardwareInputResults hir = new IoServiceHardwareWrapper.HardwareInputResults();
 
-        hir.ignition_input = intent.getBooleanExtra("ignition_input", false);
-        hir.ignition_valid = intent.getBooleanExtra("ignition_valid", false);
+        hir.ignition_input = ignitionState.get() == 1;
+        hir.ignition_valid = ignitionState.get() != -1;
+//        hir.ignition_input = intent.getBooleanExtra("ignition_input", false);
+//        hir.ignition_valid = intent.getBooleanExtra("ignition_valid", false);
         hir.input1 = intent.getIntExtra("input1", 0);
         hir.input2 = intent.getIntExtra("input2", 0);
         hir.input3 = intent.getIntExtra("input3", 0);
@@ -1278,9 +1290,17 @@ public class Io {
                     int previousDockState = service.state.readState(State.DOCK_STATE);
                     service.state.writeState(State.DOCK_STATE, dockState);
 
-                    if(dockState == 0){
+                    if(dockState == EXTRA_DOCK_STATE_UNDOCKED){ // Ignition unknown
                         // If undocked then make an infinite wakelock so device doesn't shutdown
                         dockStateWakeLock = service.power.changeWakeLock(WAKELOCK_DOCK_NAME, dockStateWakeLock, 0);
+                        Log.d(TAG, "Ignition unknown.");
+                        ignitionState.set(-1);
+                    } else if (dockState == EXTRA_DOCK_STATE_CAR) { // Ignition high
+                        Log.d(TAG, "Ignition high.");
+                        ignitionState.set(1);
+                    } else { // Ignition low
+                        Log.d(TAG, "Ignition low.");
+                        ignitionState.set(0);
                     }
 
                     // If device has gone from undocked to docked

@@ -258,7 +258,7 @@ public class WatchdogService extends Service {
         public void run() {
 
             try {
-                android.util.Log.v(TAG, "MonitorTask()");
+                Log.vv(TAG, "MonitorTask()");
 
                 setWatchdogAlarm(); // make sure that we will restart this watchdog if it dies
 
@@ -298,7 +298,7 @@ public class WatchdogService extends Service {
         public void onReceive(Context context, Intent intent)
         {
             // Update the last time we got this
-            Log.d(TAG, "MonitorReceiver::onReceive():");
+            Log.vv(TAG, "MonitorReceiver::onReceive():");
             lastReceivedTime = SystemClock.elapsedRealtime();
 
         }

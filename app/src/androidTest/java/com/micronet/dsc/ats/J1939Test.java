@@ -5,25 +5,30 @@
 
 package com.micronet.dsc.ats;
 
-import android.test.AndroidTestCase;
-import android.test.RenamingDelegatingContext;
+import android.content.Context;
+import android.os.Looper;
 
+import androidx.test.platform.app.InstrumentationRegistry;
+
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.util.Arrays;
 
+import static org.junit.Assert.*;
 
-/**
- * Created by dschmidt on 12/7/15.
- */
-public class J1939Test extends AndroidTestCase {
+public class J1939Test {
 
-    private MainService service;
-    private J1939 j1939;
-    TestCommon test;
+    private static TestCommon test;
+    private static MainService service;
+    private static J1939 j1939;
 
-    public void setUp() {
-        RenamingDelegatingContext context
-                = new RenamingDelegatingContext(getContext(), "test_");
+    @BeforeClass
+    public static void setUp() {
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        if (Looper.myLooper() == null) {
+            Looper.prepare();
+        }
 
         Config config = new Config(context);
         State state = new State(context);
@@ -45,13 +50,6 @@ public class J1939Test extends AndroidTestCase {
 
     } // setup
 
-
-    public void tearDown() throws Exception {
-
-
-        super.tearDown();
-    }
-
     /////////////////////////////////////////////////////////
     // isInCanQueue()
     //  Returns true if the given frame is in the can queue
@@ -60,19 +58,19 @@ public class J1939Test extends AndroidTestCase {
 
         if (j1939.outgoingList.isEmpty()) return false;
         J1939.CanFrame f;
-        for (int i= 0 ; i < j1939.outgoingList.size(); i++) {
+        for (int i = 0; i < j1939.outgoingList.size(); i++) {
             f = j1939.outgoingList.get(i);
-            if ( ((f.id & 0xFFFFFF) == (frameId & 0xFFFFFF)) &&
+            if (((f.id & 0xFFFFFF) == (frameId & 0xFFFFFF)) &&
                     (Arrays.equals(f.data, data))
-                    )
+            )
                 return true; // it's here!
         }
         return false;
 
     } // isInCanQueue()
 
-
-    public void test_packet2frame() {
+    @Test
+    public void testPacketToFrame() {
 
         J1939.CanPacket packet;
         J1939.CanFrame frame;
@@ -99,8 +97,8 @@ public class J1939Test extends AndroidTestCase {
 
     } // test_packet2frame
 
-
-    public void test_frame2packet() {
+    @Test
+    public void testFrameToPacket() {
 
         J1939.CanPacket packet;
         J1939.CanFrame frame;
@@ -133,8 +131,8 @@ public class J1939Test extends AndroidTestCase {
 
     } // test_frame2packet
 
-
-    public void test_receivePacketPGNs() {
+    @Test
+    public void testReceivePacketPGNs() {
 
         J1939.CanPacket packet = new J1939.CanPacket();
 
@@ -143,19 +141,19 @@ public class J1939Test extends AndroidTestCase {
         // PGN_GEAR
         packet.setPGN(0xF005);
         packet.source_address = 0xF0;
-        packet.data = new byte[] {0x7D ,0 ,0, 0x7D, 0, 0, 0, 0}; // <- 4th byte is current gear, 7D is neutral
+        packet.data = new byte[]{0x7D, 0, 0, 0x7D, 0, 0, 0, 0}; // <- 4th byte is current gear, 7D is neutral
 
         assertEquals(1, j1939.receivePacket(packet)); // 1 means parsed as PGN
         assertFalse(j1939.engine.status.flagReverseGear);
     }
 
-    public void test_receiveAddressRequest() {
-
+    @Test
+    public void testReceiveAddressRequest() {
 
 
         J1939.CanFrame frame;
         byte[] expected_data = new byte[8]; // expected response of the address claim packet
-        j1939.long2LittleEndian(j1939.J1939_NAME, expected_data, 0, 8);
+        EngineBus.long2LittleEndian(j1939.J1939_NAME, expected_data, 0, 8);
 
         j1939.start();
         j1939.myAddress = 0xBB; // just some random address
@@ -168,14 +166,14 @@ public class J1939Test extends AndroidTestCase {
         // if destination is my address then we respond
         j1939.outgoingList.clear();
         assertTrue(j1939.outgoingList.isEmpty());
-        frame = new J1939.CanFrame(0x14EABBFE, new byte[] {0 ,(byte) 0xEE ,0, 0, 0, 0, 0, 0});
+        frame = new J1939.CanFrame(0x14EABBFE, new byte[]{0, (byte) 0xEE, 0, 0, 0, 0, 0, 0});
         assertEquals(2, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(isInCanQueue(0xEEFFBB, expected_data));
 
         // If destination is global, then we respond after a delay (delay is skipped during testing)
         j1939.outgoingList.clear();
         assertTrue(j1939.outgoingList.isEmpty());
-        frame = new J1939.CanFrame(0x14EAFFFE, new byte[] {0 ,(byte) 0xEE ,0, 0, 0, 0, 0, 0});
+        frame = new J1939.CanFrame(0x14EAFFFE, new byte[]{0, (byte) 0xEE, 0, 0, 0, 0, 0, 0});
         assertEquals(2, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         //assertTrue(j1939.mainHandler.hasMessages(1));
         assertTrue(isInCanQueue(0xEEFFBB, expected_data));
@@ -184,7 +182,7 @@ public class J1939Test extends AndroidTestCase {
         // if destination is not my address, then we dont respond
         j1939.outgoingList.clear();
         assertTrue(j1939.outgoingList.isEmpty());
-        frame = new J1939.CanFrame(0x14EAC0FE, new byte[] {0 ,(byte) 0xEE ,0, 0, 0, 0, 0, 0});
+        frame = new J1939.CanFrame(0x14EAC0FE, new byte[]{0, (byte) 0xEE, 0, 0, 0, 0, 0, 0});
         assertEquals(0, j1939.receiveCANFrame(frame)); // 0 means rejected
         assertTrue(j1939.outgoingList.isEmpty());
 
@@ -193,7 +191,7 @@ public class J1939Test extends AndroidTestCase {
         j1939.myAddress = J1939.J1939_ADDRESS_NULL; // just some random address
         j1939.addressClaimAttempted = false;
 
-        frame = new J1939.CanFrame(0x14EAFFFE, new byte[] {0 ,(byte) 0xEE ,0, 0, 0, 0, 0, 0});
+        frame = new J1939.CanFrame(0x14EAFFFE, new byte[]{0, (byte) 0xEE, 0, 0, 0, 0, 0, 0});
         assertEquals(2, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(j1939.outgoingList.isEmpty());
 
@@ -202,17 +200,17 @@ public class J1939Test extends AndroidTestCase {
         j1939.addressClaimAttempted = true;
         j1939.myAddress = J1939.J1939_ADDRESS_NULL; // just some random address
 
-        frame = new J1939.CanFrame(0x14EAFFFE, new byte[] {0 ,(byte) 0xEE ,0, 0, 0, 0, 0, 0});
+        frame = new J1939.CanFrame(0x14EAFFFE, new byte[]{0, (byte) 0xEE, 0, 0, 0, 0, 0, 0});
         assertEquals(2, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(isInCanQueue(0xEEFFFE, expected_data));
 
 
     } // test_receiveAddressRequest()
 
-    public void test_parseTroubleCode() {
+    public void testParseTroubleCode() {
         // test parsing a trouble code from the 4-byte fault code portion of an DM message
 
-        byte[] input = new byte[] { 0x20, 0x21, 0x22, 0x23, (byte) 0x90, (byte) 0x91, (byte) 0x92, (byte) 0x93};
+        byte[] input = new byte[]{0x20, 0x21, 0x22, 0x23, (byte) 0x90, (byte) 0x91, (byte) 0x92, (byte) 0x93};
         long res;
 
 
@@ -230,7 +228,7 @@ public class J1939Test extends AndroidTestCase {
     } // test_parseTroubleCode()
 
 
-    public void test_receiveDM1() {
+    public void testReceiveDM1() {
         // test the ability of the code to collect DM1 broadcasts into DTCs
         // the DM1 frames could be received by both BAM and by normal frame (PGN)
 
@@ -247,7 +245,6 @@ public class J1939Test extends AndroidTestCase {
         j1939.clearCollectedDtcs();
 
 
-
         assertTrue(j1939.outgoingList.isEmpty());
 
         // DTC PGN  = 0x00FECA
@@ -256,7 +253,7 @@ public class J1939Test extends AndroidTestCase {
         // FF = reserved
 
 
-        frame = new J1939.CanFrame(0x14ECFFCC, new byte[] {32 , 10 ,0, 2, (byte) 0xFF, (byte) 0xCA, (byte) 0xFE, 0});
+        frame = new J1939.CanFrame(0x14ECFFCC, new byte[]{32, 10, 0, 2, (byte) 0xFF, (byte) 0xCA, (byte) 0xFE, 0});
         assertEquals(J1939.PARSED_PACKET_TYPE_CONTROL, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
 
         // Since this is broadcast, there should be no response from us
@@ -265,13 +262,13 @@ public class J1939Test extends AndroidTestCase {
         // First Data packet
         // first byte is MILs (2 bits each, second byte is reserved, then 4 byte DTCs
         // 0xE4 = b11100100 (only "01" is considered on, everything else is considered off)
-        frame = new J1939.CanFrame(0x14EBFFCC, new byte[] {1 , (byte) 0xE4 , 0, 0x61, 0x62, 0x63, 0x64, (byte) 0x85});
+        frame = new J1939.CanFrame(0x14EBFFCC, new byte[]{1, (byte) 0xE4, 0, 0x61, 0x62, 0x63, 0x64, (byte) 0x85});
         assertEquals(J1939.PARSED_PACKET_TYPE_CONTROL, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(j1939.outgoingList.isEmpty());
 
 
         // Next (last Data packet)
-        frame = new J1939.CanFrame(0x14EBFFCC, new byte[] {2 , (byte) 0x86, (byte) 0x87, (byte) 0x88,  (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF});
+        frame = new J1939.CanFrame(0x14EBFFCC, new byte[]{2, (byte) 0x86, (byte) 0x87, (byte) 0x88, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF});
         assertEquals(J1939.PARSED_PACKET_TYPE_CONTROL, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(j1939.outgoingList.isEmpty());
 
@@ -304,7 +301,7 @@ public class J1939Test extends AndroidTestCase {
         // Data:    First two byutes are lamp status
         //          followed by 4 byte DTC
         // 0xAA = MILS, 2 bits each, everything except value "01" for the 2 bits is considered off
-        frame = new J1939.CanFrame(0x14FECACC, new byte[] {(byte) 0xAA , 0 , 0x61, 0x62,0x63,0x65, (byte) 0xFF, (byte) 0xFF});
+        frame = new J1939.CanFrame(0x14FECACC, new byte[]{(byte) 0xAA, 0, 0x61, 0x62, 0x63, 0x65, (byte) 0xFF, (byte) 0xFF});
         assertEquals(J1939.PARSED_PACKET_TYPE_PGN, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
 
         // Since this is broadcast, there should be no response from us
@@ -322,7 +319,7 @@ public class J1939Test extends AndroidTestCase {
         /////////////
         //  Now give a new source address and see that it is added
         // 0x00 = MILS, 2 bits each, everything except value "01" for the 2 bits is considered off
-        frame = new J1939.CanFrame(0x14FECACD, new byte[] {0 , 0 , 0x61, 0x62,0x63,0x60, (byte) 0xFF, (byte) 0xFF});
+        frame = new J1939.CanFrame(0x14FECACD, new byte[]{0, 0, 0x61, 0x62, 0x63, 0x60, (byte) 0xFF, (byte) 0xFF});
         assertEquals(J1939.PARSED_PACKET_TYPE_PGN, j1939.receiveCANFrame(frame)); // 2 means parsed as control packe
 
         // Since this is broadcast, there should be no response from us
@@ -332,14 +329,14 @@ public class J1939Test extends AndroidTestCase {
         assertEquals(j1939.collectedLampsBf, 2); // still unchanged
 
         assertEquals(j1939.collectedDtcs.get(2).source_address, 0xCD);
-        assertEquals(j1939.collectedDtcs.get(2).dtc_value, (long)  0x00636261L);
+        assertEquals(j1939.collectedDtcs.get(2).dtc_value, (long) 0x00636261L);
         assertEquals(j1939.collectedDtcs.get(2).occurence_count, (0x60 & 0x7F));
 
         /////////////
         //  Now give a new DTC and see that it is also added
         // MILS, 2 bits each, everything except value "01" for the 2 bits is considered off
         //  0x4F = 01001111
-        frame = new J1939.CanFrame(0x14FECACE, new byte[] {(byte) 0x4F , 0 , 0x41, 0x42,0x43, (byte) 0x81, (byte) 0xFF, (byte) 0xFF});
+        frame = new J1939.CanFrame(0x14FECACE, new byte[]{(byte) 0x4F, 0, 0x41, 0x42, 0x43, (byte) 0x81, (byte) 0xFF, (byte) 0xFF});
         assertEquals(J1939.PARSED_PACKET_TYPE_PGN, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
 
         // Since this is broadcast, there should be no response from us
@@ -358,7 +355,7 @@ public class J1939Test extends AndroidTestCase {
         assertEquals(j1939.collectedDtcs.get(1).occurence_count, (0x88 & 0x7F));
 
         assertEquals(j1939.collectedDtcs.get(2).source_address, 0xCD);
-        assertEquals(j1939.collectedDtcs.get(2).dtc_value, (long)  0x00636261L);
+        assertEquals(j1939.collectedDtcs.get(2).dtc_value, (long) 0x00636261L);
         assertEquals(j1939.collectedDtcs.get(2).occurence_count, (0x60 & 0x7F));
 
         assertEquals(j1939.collectedDtcs.get(3).source_address, 0xCE);
@@ -368,8 +365,8 @@ public class J1939Test extends AndroidTestCase {
 
     } // test_receiveDM1()
 
-
-    public void test_processCollectedDTCsAndLamps() {
+    @Test
+    public void testProcessCollectedDTCsAndLamps() {
         // Tests ability to process the collected DTCs and Lamp status
 
         // setup
@@ -419,7 +416,6 @@ public class J1939Test extends AndroidTestCase {
         assertEquals(j1939.engine.status.lamps_bf, 6);
 
 
-
         assertEquals(Engine.BUS_TYPE_J1939_250K, j1939.engine.current_dtcs.get(0).bus_type);
         assertEquals(0x80121314L, j1939.engine.current_dtcs.get(0).dtc_value);
         assertEquals(0, j1939.engine.current_dtcs.get(0).source_address);
@@ -435,7 +431,8 @@ public class J1939Test extends AndroidTestCase {
 
     } // test_processCollectedDTCsAndLamps()
 
-    public void test_receiveVIN() {
+    @Test
+    public void testReceiveVIN() {
         // test the ability of the code to receive a VIN over the transport protocol
 
         J1939.CanFrame frame;
@@ -455,7 +452,7 @@ public class J1939Test extends AndroidTestCase {
         // response is 17 bytes, which takes 3 packets
         // accepting 5 max packets per burst
 
-        frame = new J1939.CanFrame(0x14ECBB00, new byte[] {16 ,17 ,0, 3, 5, (byte) 0xEC, (byte) 0xFE, 0});
+        frame = new J1939.CanFrame(0x14ECBB00, new byte[]{16, 17, 0, 3, 5, (byte) 0xEC, (byte) 0xFE, 0});
         assertEquals(J1939.PARSED_PACKET_TYPE_CONTROL, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
 
         // we should have sent a CTS
@@ -464,7 +461,7 @@ public class J1939Test extends AndroidTestCase {
         //  Next packet #1
         // FF FF reserved
         // PGN
-        expected_response = new byte[] {17, 1, 1, (byte) 0xFF, (byte) 0xFF, (byte) 0xEC, (byte) 0xFE, 0} ; // expected response of the address claim packet
+        expected_response = new byte[]{17, 1, 1, (byte) 0xFF, (byte) 0xFF, (byte) 0xEC, (byte) 0xFE, 0}; // expected response of the address claim packet
         assertTrue(isInCanQueue(0xEC00BB, expected_response));
 
 
@@ -473,11 +470,11 @@ public class J1939Test extends AndroidTestCase {
         j1939.outgoingList.clear();
         assertTrue(j1939.outgoingList.isEmpty());
 
-        frame = new J1939.CanFrame(0x14EBBB00, new byte[] {1 , 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47});
+        frame = new J1939.CanFrame(0x14EBBB00, new byte[]{1, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47});
         assertEquals(J1939.PARSED_PACKET_TYPE_CONTROL, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
 
         // we should have send the ACK
-        expected_response = new byte[] {17, 1, 2, (byte) 0xFF, (byte) 0xFF, (byte) 0xEC, (byte) 0xFE, 0} ; // expected response of the address claim packet
+        expected_response = new byte[]{17, 1, 2, (byte) 0xFF, (byte) 0xFF, (byte) 0xEC, (byte) 0xFE, 0}; // expected response of the address claim packet
         assertTrue(isInCanQueue(0xEC00BB, expected_response));
 
 
@@ -486,11 +483,11 @@ public class J1939Test extends AndroidTestCase {
         j1939.outgoingList.clear();
         assertTrue(j1939.outgoingList.isEmpty());
 
-        frame = new J1939.CanFrame(0x14EBBB00, new byte[] {2 , 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E});
+        frame = new J1939.CanFrame(0x14EBBB00, new byte[]{2, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E});
         assertEquals(J1939.PARSED_PACKET_TYPE_CONTROL, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
 
         // we should have sent the ACK
-        expected_response = new byte[] {17, 1, 3, (byte) 0xFF, (byte) 0xFF, (byte) 0xEC, (byte) 0xFE, 0} ; // expected response
+        expected_response = new byte[]{17, 1, 3, (byte) 0xFF, (byte) 0xFF, (byte) 0xEC, (byte) 0xFE, 0}; // expected response
         assertTrue(isInCanQueue(0xEC00BB, expected_response));
 
 
@@ -499,11 +496,11 @@ public class J1939Test extends AndroidTestCase {
         j1939.outgoingList.clear();
         assertTrue(j1939.outgoingList.isEmpty());
 
-        frame = new J1939.CanFrame(0x14EBBB00, new byte[] {3 , 0x4F, 0x50, 0x51, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF});
+        frame = new J1939.CanFrame(0x14EBBB00, new byte[]{3, 0x4F, 0x50, 0x51, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF});
         assertEquals(J1939.PARSED_PACKET_TYPE_CONTROL, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
 
         // we should have sent the EOM
-        expected_response = new byte[] {19, 17, 0, 3, (byte) 0xFF, (byte) 0xEC, (byte) 0xFE, 0} ; // expected response
+        expected_response = new byte[]{19, 17, 0, 3, (byte) 0xFF, (byte) 0xEC, (byte) 0xFE, 0}; // expected response
         assertTrue(isInCanQueue(0xEC00BB, expected_response));
 
 
@@ -512,8 +509,8 @@ public class J1939Test extends AndroidTestCase {
 
     } // test_receiveVIN
 
-
-    public void test_global_receiveVIN() {
+    @Test
+    public void testGlobalReceiveVIN() {
         // test the ability of the code to receive a VIN over the transport protocol to a glboal address
         // follow this with something else on the global address to make sure it doesnt interfere
 
@@ -537,32 +534,27 @@ public class J1939Test extends AndroidTestCase {
         // response is 17 bytes, which takes 3 packets
         // accepting 5 max packets per burst
 
-        frame = new J1939.CanFrame(0x14ECFF00, new byte[] {16 ,17 ,0, 3, 5, (byte) 0xEC, (byte) 0xFE, 0});
+        frame = new J1939.CanFrame(0x14ECFF00, new byte[]{16, 17, 0, 3, 5, (byte) 0xEC, (byte) 0xFE, 0});
         assertEquals(J1939.PARSED_PACKET_TYPE_CONTROL, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(j1939.outgoingList.isEmpty()); // No Response needed
 
 
-        frame = new J1939.CanFrame(0x14EBFF00, new byte[] {1 , 0x51, 0x50, 0x4F, 0x4E, 0x4D, 0x4C, 0x4B});
+        frame = new J1939.CanFrame(0x14EBFF00, new byte[]{1, 0x51, 0x50, 0x4F, 0x4E, 0x4D, 0x4C, 0x4B});
         assertEquals(J1939.PARSED_PACKET_TYPE_CONTROL, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(j1939.outgoingList.isEmpty()); // No Response needed
 
 
-        frame = new J1939.CanFrame(0x14EBFF00, new byte[] {2 , 0x4A, 0x49, 0x48, 0x47, 0x46, 0x45, 0x44});
+        frame = new J1939.CanFrame(0x14EBFF00, new byte[]{2, 0x4A, 0x49, 0x48, 0x47, 0x46, 0x45, 0x44});
         assertEquals(J1939.PARSED_PACKET_TYPE_CONTROL, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(j1939.outgoingList.isEmpty()); // No Response needed
 
-        frame = new J1939.CanFrame(0x14EBFF00, new byte[] {3 , 0x43, 0x42, 0x41, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF});
+        frame = new J1939.CanFrame(0x14EBFF00, new byte[]{3, 0x43, 0x42, 0x41, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF});
         assertEquals(J1939.PARSED_PACKET_TYPE_CONTROL, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(j1939.outgoingList.isEmpty()); // No Response needed
 
 
         // we should also have our new vin
         assertEquals(j1939.engine.vin, "QPONMLKJIHGFEDCBA");
-
-
-
-
-
 
 
         //////////////////////////////////////////////////
@@ -574,13 +566,12 @@ public class J1939Test extends AndroidTestCase {
         j1939.outgoingList.clear();
         assertTrue(j1939.outgoingList.isEmpty());
 
-        J1939.CanFrame frame1 = new J1939.CanFrame(0x18ecff00, new byte[] { 0x20, 0x22, 0x00, 0x05, (byte) 0xFF, (byte) 0xE3, (byte) 0xFE, 0x00});
-        J1939.CanFrame frame2 = new J1939.CanFrame(0x18ebff00, new byte[] { 0x01, 0x00, 0x19, (byte) 0xAE, 0x40, 0x51, (byte) 0xC5, 0x08});
-        J1939.CanFrame frame3 = new J1939.CanFrame(0x18ebff00, new byte[] { 0x02, 0x20, (byte) 0xBD, (byte) 0xC0, 0x2B, (byte) 0xCF, (byte) 0xC0, 0x44});
-        J1939.CanFrame frame4 = new J1939.CanFrame(0x18ebff00, new byte[] { 0x03, (byte) 0xD0, 0x40, 0x51, (byte) 0xFF, (byte) 0xFF, (byte) 0xB9, 0x04});
-        J1939.CanFrame frame5 = new J1939.CanFrame(0x18ebff00, new byte[] { 0x04, 0x38, 0x5E, 0x3C, 0x46, (byte) 0xFA, 0x7D, (byte) 0xCF});
-        J1939.CanFrame frame6 = new J1939.CanFrame(0x18ebff00, new byte[] { 0x05, 0x40, 0x51, (byte) 0x86, 0x00, 0x2A, 0x03, (byte) 0xFF});
-
+        J1939.CanFrame frame1 = new J1939.CanFrame(0x18ecff00, new byte[]{0x20, 0x22, 0x00, 0x05, (byte) 0xFF, (byte) 0xE3, (byte) 0xFE, 0x00});
+        J1939.CanFrame frame2 = new J1939.CanFrame(0x18ebff00, new byte[]{0x01, 0x00, 0x19, (byte) 0xAE, 0x40, 0x51, (byte) 0xC5, 0x08});
+        J1939.CanFrame frame3 = new J1939.CanFrame(0x18ebff00, new byte[]{0x02, 0x20, (byte) 0xBD, (byte) 0xC0, 0x2B, (byte) 0xCF, (byte) 0xC0, 0x44});
+        J1939.CanFrame frame4 = new J1939.CanFrame(0x18ebff00, new byte[]{0x03, (byte) 0xD0, 0x40, 0x51, (byte) 0xFF, (byte) 0xFF, (byte) 0xB9, 0x04});
+        J1939.CanFrame frame5 = new J1939.CanFrame(0x18ebff00, new byte[]{0x04, 0x38, 0x5E, 0x3C, 0x46, (byte) 0xFA, 0x7D, (byte) 0xCF});
+        J1939.CanFrame frame6 = new J1939.CanFrame(0x18ebff00, new byte[]{0x05, 0x40, 0x51, (byte) 0x86, 0x00, 0x2A, 0x03, (byte) 0xFF});
 
 
         assertEquals(J1939.PARSED_PACKET_TYPE_CONTROL, j1939.receiveCANFrame(frame1));
@@ -599,9 +590,8 @@ public class J1939Test extends AndroidTestCase {
 
     } // test_global_receiveVIN()
 
-
-
-    public void test_receiveFuelConsumption() {
+    @Test
+    public void testReceiveFuelConsumption() {
         // test the ability of the code to receive a Fuel Consumption value
 
         // Setup
@@ -621,7 +611,7 @@ public class J1939Test extends AndroidTestCase {
         //      Bytes 5-8 : Total Fuel 0.5 L/bit gain, 0 L offset
 
 
-        frame = new J1939.CanFrame(0x14FEE9CC, new byte[] {0 ,0 ,0, 0, (byte) 0xFF, 0x30, 0x40, (byte) 0x80});
+        frame = new J1939.CanFrame(0x14FEE9CC, new byte[]{0, 0, 0, 0, (byte) 0xFF, 0x30, 0x40, (byte) 0x80});
         assertEquals(J1939.PARSED_PACKET_TYPE_PGN, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
 
         assertTrue(j1939.outgoingList.isEmpty()); // No Response needed
@@ -631,7 +621,7 @@ public class J1939Test extends AndroidTestCase {
 
         // Now test unknown value of all FF
 
-        frame = new J1939.CanFrame(0x14FEE9CC, new byte[] {0 ,0 ,0, 0, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF});
+        frame = new J1939.CanFrame(0x14FEE9CC, new byte[]{0, 0, 0, 0, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF});
         assertEquals(J1939.PARSED_PACKET_TYPE_PGN, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
 
 
@@ -640,8 +630,8 @@ public class J1939Test extends AndroidTestCase {
 
     } // test_receiveFuelConsumption()
 
-
-    public void test_receiveFuelEconomy() {
+    @Test
+    public void testReceiveFuelEconomy() {
         // test the ability of the code to receive a Fuel Economy value
 
         // Setup
@@ -660,8 +650,7 @@ public class J1939Test extends AndroidTestCase {
         //      Bytes 5-6 : Average Fuel Econ 1/512 km/L per bit gain, 0 km/L offset
 
 
-
-        frame = new J1939.CanFrame(0x14FEF2CC, new byte[] {0 ,0 ,0, 0, (byte) 0x80, (byte) 0xF0, 0,0});
+        frame = new J1939.CanFrame(0x14FEF2CC, new byte[]{0, 0, 0, 0, (byte) 0x80, (byte) 0xF0, 0, 0});
         assertEquals(J1939.PARSED_PACKET_TYPE_PGN, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
 
         assertTrue(j1939.outgoingList.isEmpty()); // No Response needed
@@ -672,16 +661,15 @@ public class J1939Test extends AndroidTestCase {
 
         // Now test unknown value of all FF
 
-        frame = new J1939.CanFrame(0x14FEF2CC, new byte[] {0 ,0 ,0, 0, (byte) 0xFF, (byte) 0xFF, 0,0});
+        frame = new J1939.CanFrame(0x14FEF2CC, new byte[]{0, 0, 0, 0, (byte) 0xFF, (byte) 0xFF, 0, 0});
         assertEquals(J1939.PARSED_PACKET_TYPE_PGN, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
 
         // unchanged
         assertEquals(0xF080 * 1000 / 512, j1939.engine.status.fuel_mperL); // 1000 / 512 is conversion to mperL
     } // test_receiveFuelEconomy()
 
-
-
-    public void test_receiveParkingBrake() {
+    @Test
+    public void testReceiveParkingBrake() {
         // test the ability of the code to receive the parking brake on/off
 
         // Setup
@@ -711,9 +699,8 @@ public class J1939Test extends AndroidTestCase {
         }
 
 
-
         // Turn it on -- 5th consecutive entry of same value
-        frame = new J1939.CanFrame(0x14FEF1CC, new byte[] {0b00000100 ,0 ,0, 0, 0,0,0,0});
+        frame = new J1939.CanFrame(0x14FEF1CC, new byte[]{0b00000100, 0, 0, 0, 0, 0, 0, 0});
         assertEquals(J1939.PARSED_PACKET_TYPE_PGN, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(j1939.outgoingList.isEmpty()); // No Response needed
         assertTrue(j1939.engine.status.flagParkingBrake);
@@ -734,7 +721,6 @@ public class J1939Test extends AndroidTestCase {
         assertFalse(j1939.engine.status.flagParkingBrake); // still on --- default in case of conflict
 
 
-
         // Turn On: (Actual data from vehicle)
         for (int i = 0; i < 6; i++) {
             frame = new J1939.CanFrame(0x14FEF1CC, new byte[]{(byte) 0xF7, (byte) 0xFF, (byte) 0xFF, (byte) 0xC3, 0x00, (byte) 0xFF, (byte) 0xFF, 0x3F});
@@ -742,7 +728,6 @@ public class J1939Test extends AndroidTestCase {
             assertTrue(j1939.outgoingList.isEmpty()); // No Response needed
             assertTrue(j1939.engine.status.flagParkingBrake); // default is on, so after first one there is a conflict and we are on
         }
-
 
 
         // Unchanged (actual data from vehicle)
@@ -773,10 +758,10 @@ public class J1939Test extends AndroidTestCase {
         }
 
 
-
     } // test_receiveParkingBrake()
 
-    public void test_receiveReverseGear() {
+    @Test
+    public void testReceiveReverseGear() {
         // test the ability of the code to receive whether we are in reverse or not
 
         // Setup
@@ -800,60 +785,60 @@ public class J1939Test extends AndroidTestCase {
         //              251 = Park
 
         //Neutral
-        frame = new J1939.CanFrame(0x14F005CC, new byte[] {0,0,0,0x7D, 0,0,0,0});
+        frame = new J1939.CanFrame(0x14F005CC, new byte[]{0, 0, 0, 0x7D, 0, 0, 0, 0});
         assertEquals(J1939.PARSED_PACKET_TYPE_PGN, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(j1939.outgoingList.isEmpty()); // No Response needed
         assertFalse(j1939.engine.status.flagReverseGear);
 
 
         // Reverse 1
-        frame = new J1939.CanFrame(0x14F005CC, new byte[] {0,0,0,0x7C, 0,0,0,0});
+        frame = new J1939.CanFrame(0x14F005CC, new byte[]{0, 0, 0, 0x7C, 0, 0, 0, 0});
         assertEquals(J1939.PARSED_PACKET_TYPE_PGN, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(j1939.outgoingList.isEmpty()); // No Response needed
         assertTrue(j1939.engine.status.flagReverseGear);
 
 
         // Now test unchanged
-        frame = new J1939.CanFrame(0x14F005CC, new byte[] {0,0,0,(byte) 0xFF, 0,0,0,0});
+        frame = new J1939.CanFrame(0x14F005CC, new byte[]{0, 0, 0, (byte) 0xFF, 0, 0, 0, 0});
         assertEquals(J1939.PARSED_PACKET_TYPE_PGN, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(j1939.outgoingList.isEmpty()); // No Response needed
         assertTrue(j1939.engine.status.flagReverseGear);
 
 
         // Forward 1
-        frame = new J1939.CanFrame(0x14F005CC, new byte[] {0,0,0,0x7E, 0,0,0,0});
+        frame = new J1939.CanFrame(0x14F005CC, new byte[]{0, 0, 0, 0x7E, 0, 0, 0, 0});
         assertEquals(J1939.PARSED_PACKET_TYPE_PGN, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(j1939.outgoingList.isEmpty()); // No Response needed
         assertFalse(j1939.engine.status.flagReverseGear);
 
 
         // Now test unchanged
-        frame = new J1939.CanFrame(0x14F005CC, new byte[] {0,0,0,(byte) 0xFF, 0,0,0,0});
+        frame = new J1939.CanFrame(0x14F005CC, new byte[]{0, 0, 0, (byte) 0xFF, 0, 0, 0, 0});
         assertEquals(J1939.PARSED_PACKET_TYPE_PGN, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(j1939.outgoingList.isEmpty()); // No Response needed
         assertFalse(j1939.engine.status.flagReverseGear);
 
 
         // Reverse 2
-        frame = new J1939.CanFrame(0x14F005CC, new byte[] {0,0,0,0x7B, 0,0,0,0});
+        frame = new J1939.CanFrame(0x14F005CC, new byte[]{0, 0, 0, 0x7B, 0, 0, 0, 0});
         assertEquals(J1939.PARSED_PACKET_TYPE_PGN, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(j1939.outgoingList.isEmpty()); // No Response needed
         assertTrue(j1939.engine.status.flagReverseGear);
 
         // Park
-        frame = new J1939.CanFrame(0x14F005CC, new byte[] {0,0,0, (byte) 0xFB, 0,0,0,0});
+        frame = new J1939.CanFrame(0x14F005CC, new byte[]{0, 0, 0, (byte) 0xFB, 0, 0, 0, 0});
         assertEquals(J1939.PARSED_PACKET_TYPE_PGN, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(j1939.outgoingList.isEmpty()); // No Response needed
         assertFalse(j1939.engine.status.flagReverseGear);
 
         // Reverse 3
-        frame = new J1939.CanFrame(0x14F005CC, new byte[] {0,0,0,0x7A, 0,0,0,0});
+        frame = new J1939.CanFrame(0x14F005CC, new byte[]{0, 0, 0, 0x7A, 0, 0, 0, 0});
         assertEquals(J1939.PARSED_PACKET_TYPE_PGN, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(j1939.outgoingList.isEmpty()); // No Response needed
         assertTrue(j1939.engine.status.flagReverseGear);
 
         // Forward 4
-        frame = new J1939.CanFrame(0x14F005CC, new byte[] {0,0,0,(byte) 0x81, 0,0,0,0});
+        frame = new J1939.CanFrame(0x14F005CC, new byte[]{0, 0, 0, (byte) 0x81, 0, 0, 0, 0});
         assertEquals(J1939.PARSED_PACKET_TYPE_PGN, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(j1939.outgoingList.isEmpty()); // No Response needed
         assertFalse(j1939.engine.status.flagReverseGear);
@@ -861,9 +846,8 @@ public class J1939Test extends AndroidTestCase {
 
     } // test_receiveReverseGear()
 
-
-
-    public void test_receiveOdometer() {
+    @Test
+    public void testReceiveOdometer() {
         // test the ability of the code to receive an Odometer value over the transport protocol
         // Check both Low Res and Hi-Res Odometers (Hi-Res will take precendence)
 
@@ -886,12 +870,11 @@ public class J1939Test extends AndroidTestCase {
         //      Bytes 5-8 : Total Distance 0.125 km/bit gain, 0 km offset
 
 
-        frame = new J1939.CanFrame(0x14FEE0CC, new byte[] {0 ,0 ,0, 0, (byte) 0xAC, 0x50, 0x60, (byte) 0x82});
+        frame = new J1939.CanFrame(0x14FEE0CC, new byte[]{0, 0, 0, 0, (byte) 0xAC, 0x50, 0x60, (byte) 0x82});
         assertEquals(J1939.PARSED_PACKET_TYPE_PGN, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(j1939.outgoingList.isEmpty()); // No Response needed
 
         assertEquals(0x826050ACL * 125, j1939.engine.status.odometer_m); // 125 is conversion to meters
-
 
 
         // Send hi-res distance
@@ -902,12 +885,11 @@ public class J1939Test extends AndroidTestCase {
         //      Bytes 5- 8 : Trip Distance
 
 
-        frame = new J1939.CanFrame(0x14FEC1CC, new byte[] {(byte) 0x40, (byte) 0x91, 0x70, (byte) 0xC2, 0, 0, 0, 0});
+        frame = new J1939.CanFrame(0x14FEC1CC, new byte[]{(byte) 0x40, (byte) 0x91, 0x70, (byte) 0xC2, 0, 0, 0, 0});
         assertEquals(J1939.PARSED_PACKET_TYPE_PGN, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(j1939.outgoingList.isEmpty()); // No Response needed
 
         assertEquals(0xC2709140L * 5, j1939.engine.status.odometer_m); // 5 is conversion to meters
-
 
 
         // Send another low-res distance -- should be ignored since we have a high-res
@@ -918,7 +900,7 @@ public class J1939Test extends AndroidTestCase {
         //      Bytes 5-8 : Total Distance 0.125 km/bit gain, 0 km offset
 
 
-        frame = new J1939.CanFrame(0x14FEE0CC, new byte[] {0 ,0 ,0, 0, (byte) 0xAC, 0x50, 0x60, (byte) 0x82});
+        frame = new J1939.CanFrame(0x14FEE0CC, new byte[]{0, 0, 0, 0, (byte) 0xAC, 0x50, 0x60, (byte) 0x82});
         assertEquals(J1939.PARSED_PACKET_TYPE_PGN, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(j1939.outgoingList.isEmpty()); // No Response needed
 
@@ -934,8 +916,7 @@ public class J1939Test extends AndroidTestCase {
         //      Bytes 5- 8 : Trip Distance
 
 
-
-        frame = new J1939.CanFrame(0x14FEC1CC, new byte[] {(byte) 0x70, (byte) 0x91, 0x70, (byte) 0xC2, 0, 0, 0, 0});
+        frame = new J1939.CanFrame(0x14FEC1CC, new byte[]{(byte) 0x70, (byte) 0x91, 0x70, (byte) 0xC2, 0, 0, 0, 0});
         assertEquals(J1939.PARSED_PACKET_TYPE_PGN, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(j1939.outgoingList.isEmpty()); // No Response needed
         assertEquals(0xC2709170L * 5, j1939.engine.status.odometer_m); // 5 is conversion to meters
@@ -943,17 +924,13 @@ public class J1939Test extends AndroidTestCase {
 
         // Test Unchanged value hi-res
 
-        frame = new J1939.CanFrame(0x14FEC1CC, new byte[] {(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, 0, 0, 0, 0});
+        frame = new J1939.CanFrame(0x14FEC1CC, new byte[]{(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, 0, 0, 0, 0});
         assertEquals(J1939.PARSED_PACKET_TYPE_PGN, j1939.receiveCANFrame(frame)); // 2 means parsed as control packet
         assertTrue(j1939.outgoingList.isEmpty()); // No Response needed
         assertEquals(0xC2709170L * 5, j1939.engine.status.odometer_m); // 5 is conversion to meters
 
 
-
-
     } // test_receiveOdometer()
-
-
 
 
 } // class J1939Test

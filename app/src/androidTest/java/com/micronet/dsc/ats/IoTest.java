@@ -5,22 +5,37 @@
 
 package com.micronet.dsc.ats;
 
-import android.test.AndroidTestCase;
-import android.test.RenamingDelegatingContext;
+import android.content.Context;
+import android.os.Looper;
 
+import androidx.test.platform.app.InstrumentationRegistry;
 
-public class IoTest  extends AndroidTestCase {
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-    private MainService service;
-    private Io io;
-    TestCommon test;
+import static org.junit.Assert.*;
 
-    public void setUp(){
-        RenamingDelegatingContext context
-                = new RenamingDelegatingContext(getContext(), "test_");
+public class IoTest {
 
-        Config config = new Config(context);
-        State state = new State(context);
+    private static TestCommon test;
+    private static MainService service;
+    private static Io io;
+    private static Config config;
+    private static State state;
+
+    int F = 2; // should have turned off
+    int N = 3; // should have turned on
+
+    @Before
+    public void setUp() {
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        if (Looper.myLooper() == null) {
+            Looper.prepare();
+        }
+
+        config = new Config(context);
+        state = new State(context);
 
         // clear config and state info to the default before init'ing IO
         config.open();
@@ -34,22 +49,10 @@ public class IoTest  extends AndroidTestCase {
         service.clearEventSequenceIdNow();
 
         test = new TestCommon(service.queue);
-
-
     }
 
-
-    public void tearDown() throws Exception{
-
-
-        super.tearDown();
-    }
-
-
-
-
-
-    public void test_checkIgnition() {
+    @Test
+    public void testCheckIgnition() {
 
         // Get the voltage threshold for the config setting, make sure it is as we expect
 
@@ -64,7 +67,7 @@ public class IoTest  extends AndroidTestCase {
         int i;
 
         // no matter how long, if ignition is off then we are off
-        for (i= 1 ; i < 10; i++) {
+        for (i = 1; i < 10; i++) {
             assertFalse(io.checkIgnitionInput(false));
         }
 
@@ -74,9 +77,6 @@ public class IoTest  extends AndroidTestCase {
         assertNull(service.queue.getFirstItem(Queue.SERVER_ID_PRIMARY));
         assertFalse(io.checkIgnitionInput(true));
         assertTrue(io.checkIgnitionInput(true));
-
-
-
 
 
         // other things that should have happened when ignition turned on:
@@ -95,13 +95,12 @@ public class IoTest  extends AndroidTestCase {
 
     } // test_checkIgnition()
 
-
-
     private int ticksPerTenth(int tenth_secs) {
-        return tenth_secs/ IoService.INPUT_POLL_PERIOD_TENTHS;
+        return tenth_secs / IoService.INPUT_POLL_PERIOD_TENTHS;
     }
 
-    public void test_checkBadAlternator() {
+    @Test
+    public void testCheckBadAlternator() {
 
         // Get the voltage threshold for the config setting, make sure it is as we expect
 
@@ -111,12 +110,10 @@ public class IoTest  extends AndroidTestCase {
         final int TSHORT = 2 * 10 * IoService.INPUT_POLL_PERIOD_TENTHS; // shorter than trigger
         final int TTRIGGER = 6 * 10 * IoService.INPUT_POLL_PERIOD_TENTHS;
         final int TRESET = 8 * 10 * IoService.INPUT_POLL_PERIOD_TENTHS;
-        final int TLONG = 10 * 10 *  IoService.INPUT_POLL_PERIOD_TENTHS; // longer than reset
+        final int TLONG = 10 * 10 * IoService.INPUT_POLL_PERIOD_TENTHS; // longer than reset
 
 
-
-
-        service.config.writeSetting(Config.SETTING_BAD_ALTERNATOR_STATUS, "132|" + (TTRIGGER/10)+ "|" + (TRESET/10)+ "|3");
+        service.config.writeSetting(Config.SETTING_BAD_ALTERNATOR_STATUS, "132|" + (TTRIGGER / 10) + "|" + (TRESET / 10) + "|3");
 
         // because input poll period is slower (500ms), really this takes wither 5 or 6 polls, not 30 or 40
 
@@ -128,21 +125,19 @@ public class IoTest  extends AndroidTestCase {
         // no matter how long, if voltage is higher then it doesn't trigger
 
 
-
-
-        for (i= 1 ; i < ticksPerTenth(TLONG); i++) {
+        for (i = 1; i < ticksPerTenth(TLONG); i++) {
             assertFalse(io.checkBadAlternator((short) 133));
         }
         // voltage goes low for too short a period --> doesn't trigger
-        for (i= 1 ; i < ticksPerTenth(TTRIGGER); i++) {
+        for (i = 1; i < ticksPerTenth(TTRIGGER); i++) {
             assertFalse(io.checkBadAlternator((short) 131));
         }
         // no matter how long, if voltage is higher then it doesn't trigger
-        for (i= 1 ; i < ticksPerTenth(TLONG); i++) {
+        for (i = 1; i < ticksPerTenth(TLONG); i++) {
             assertFalse(io.checkBadAlternator((short) 133));
         }
         // voltage goes low for too short a period --> doesn't trigger
-        for (i= 1 ; i < ticksPerTenth(TTRIGGER); i++) {
+        for (i = 1; i < ticksPerTenth(TTRIGGER); i++) {
             assertFalse(io.checkBadAlternator((short) 131));
         }
         // low for a long enough period -> trigger
@@ -152,19 +147,19 @@ public class IoTest  extends AndroidTestCase {
         service.queue.clearAll();
 
         // low for long time ->  still triggered
-        for (i= 1 ; i < ticksPerTenth(TLONG); i++) {
+        for (i = 1; i < ticksPerTenth(TLONG); i++) {
             assertTrue(io.checkBadAlternator((short) 131));
         }
         // high for a short time --> still triggered
-        for (i= 1 ; i < ticksPerTenth(TRESET); i++) {
+        for (i = 1; i < ticksPerTenth(TRESET); i++) {
             assertTrue(io.checkBadAlternator((short) 133));
         }
         // low again for short time --> still triggered
-        for (i= 1 ; i < ticksPerTenth(TSHORT); i++) {
+        for (i = 1; i < ticksPerTenth(TSHORT); i++) {
             assertTrue(io.checkBadAlternator((short) 131));
         }
         // high for a short time --> still triggered
-        for (i= 1 ; i < ticksPerTenth(TRESET); i++) {
+        for (i = 1; i < ticksPerTenth(TRESET); i++) {
             assertTrue(io.checkBadAlternator((short) 133));
         }
         // high for long enough, no longer triggered
@@ -174,21 +169,20 @@ public class IoTest  extends AndroidTestCase {
 
     } // test_checkBadAlternator()
 
-
-    public void test_checkLowBattery() {
+    @Test
+    public void testCheckLowBattery() {
 
         // You should pick values here which are integrals of io.INPUT_POLL_PERIOD_TENTHS
 
         final int TSHORT = 2 * 10 * IoService.INPUT_POLL_PERIOD_TENTHS; // shorter than trigger
         final int TTRIGGER = 6 * 10 * IoService.INPUT_POLL_PERIOD_TENTHS;
         final int TRESET = 8 * 10 * IoService.INPUT_POLL_PERIOD_TENTHS;
-        final int TLONG = 10 * 10 *  IoService.INPUT_POLL_PERIOD_TENTHS; // longer than reset
-
+        final int TLONG = 10 * 10 * IoService.INPUT_POLL_PERIOD_TENTHS; // longer than reset
 
 
         // Get the voltage threshold for the config setting, make sure it is as we expect
 
-        service.config.writeSetting(Config.SETTING_LOW_BATTERY_STATUS, "105|" + (TTRIGGER/10) + "|" + (TRESET/10) + "|3");
+        service.config.writeSetting(Config.SETTING_LOW_BATTERY_STATUS, "105|" + (TTRIGGER / 10) + "|" + (TRESET / 10) + "|3");
 
         // because input poll period is slower (500ms), really this takes wither 5 or 6 polls, not 30 or 40
 
@@ -198,19 +192,19 @@ public class IoTest  extends AndroidTestCase {
         int i;
 
         // no matter how long, if voltage is higher then it doesn't trigger
-        for (i= 1 ; i < ticksPerTenth(TSHORT); i++) {
+        for (i = 1; i < ticksPerTenth(TSHORT); i++) {
             assertFalse(io.checkLowBattery((short) 106));
         }
         // voltage goes low for too short a period --> doesn't trigger
-        for (i= 1 ; i < ticksPerTenth(TTRIGGER); i++) {
+        for (i = 1; i < ticksPerTenth(TTRIGGER); i++) {
             assertFalse(io.checkLowBattery((short) 104));
         }
         // no matter how long, if voltage is higher then it doesn't trigger
-        for (i= 1 ; i < ticksPerTenth(TLONG); i++) {
+        for (i = 1; i < ticksPerTenth(TLONG); i++) {
             assertFalse(io.checkLowBattery((short) 106));
         }
         // voltage goes low for too short a period --> doesn't trigger
-        for (i= 1 ; i < ticksPerTenth(TTRIGGER); i++) {
+        for (i = 1; i < ticksPerTenth(TTRIGGER); i++) {
             assertFalse(io.checkLowBattery((short) 104));
         }
         // low for a long enough period -> trigger
@@ -220,23 +214,23 @@ public class IoTest  extends AndroidTestCase {
         service.queue.clearAll();
 
         // low for long time ->  still triggered
-        for (i= 1 ; i < ticksPerTenth(TLONG); i++) {
+        for (i = 1; i < ticksPerTenth(TLONG); i++) {
             assertTrue(io.checkLowBattery((short) 104));
         }
         // on mark for long period has no effect
-        for (i= 1 ; i < ticksPerTenth(TLONG); i++) {
+        for (i = 1; i < ticksPerTenth(TLONG); i++) {
             assertTrue(io.checkLowBattery((short) 105));
         }
         // high for a short time --> still triggered
-        for (i= 1 ; i < ticksPerTenth(TRESET); i++) {
+        for (i = 1; i < ticksPerTenth(TRESET); i++) {
             assertTrue(io.checkLowBattery((short) 106));
         }
         // low again for short time --> still triggered
-        for (i= 1 ; i < ticksPerTenth(TSHORT); i++) {
+        for (i = 1; i < ticksPerTenth(TSHORT); i++) {
             assertTrue(io.checkLowBattery((short) 104));
         }
         // high for a short time --> still triggered
-        for (i= 1 ; i < ticksPerTenth(TRESET); i++) {
+        for (i = 1; i < ticksPerTenth(TRESET); i++) {
             assertTrue(io.checkLowBattery((short) 106));
         }
         // high for long enough, no longer triggered
@@ -245,23 +239,21 @@ public class IoTest  extends AndroidTestCase {
         assertEquals(EventType.EVENT_TYPE_LOW_BATTERY_OFF, service.queue.getFirstItem(Queue.SERVER_ID_PRIMARY).event_type_id);
 
         // on mark for long period has not effect
-        for (i= 1 ; i < ticksPerTenth(TLONG); i++) {
+        for (i = 1; i < ticksPerTenth(TLONG); i++) {
             assertFalse(io.checkLowBattery((short) 105));
         }
 
     } // test_checkLowBattery()
 
-
-
-    public void test_checkDigitalInput_Input1() {
+    @Test
+    public void testCheckDigitalInput1() {
 
 
         // You should pick values here which are integrals of io.INPUT_POLL_PERIOD_TENTHS
 
         final int T10 = 2 * IoService.INPUT_POLL_PERIOD_TENTHS;
-        final int T20 = 4 *  IoService.INPUT_POLL_PERIOD_TENTHS; // longer than reset
+        final int T20 = 4 * IoService.INPUT_POLL_PERIOD_TENTHS; // longer than reset
         final int T50 = 10 * IoService.INPUT_POLL_PERIOD_TENTHS;
-
 
 
         // Get the voltage threshold for the config setting, make sure it is as we expect
@@ -280,7 +272,7 @@ public class IoTest  extends AndroidTestCase {
         int i;
 
         // no matter how long we are physically inactive, we are never logically active
-        for (i= 1; i < ticksPerTenth(T50); i++) {
+        for (i = 1; i < ticksPerTenth(T50); i++) {
             assertFalse(io.checkDigitalInput(1, 0));
         }
 
@@ -297,7 +289,7 @@ public class IoTest  extends AndroidTestCase {
         service.queue.clearAll();
 
         // continued physical on has no effect
-        for (i= 1; i < ticksPerTenth(T20); i++) {
+        for (i = 1; i < ticksPerTenth(T20); i++) {
             assertTrue(io.checkDigitalInput(1, 1));
         }
         assertNull(service.queue.getFirstItem(Queue.SERVER_ID_PRIMARY));
@@ -312,12 +304,12 @@ public class IoTest  extends AndroidTestCase {
         service.queue.clearAll();
 
         // now check for just shy of reset period
-        for (i= 1; i < ticksPerTenth(T50); i++) {
+        for (i = 1; i < ticksPerTenth(T50); i++) {
             assertFalse(io.checkDigitalInput(1, 0));
         }
 
         // followed by lots of time on
-        for (i= 1; i < ticksPerTenth(T20); i++) {
+        for (i = 1; i < ticksPerTenth(T20); i++) {
             assertFalse(io.checkDigitalInput(1, 1));
         }
 
@@ -325,7 +317,7 @@ public class IoTest  extends AndroidTestCase {
 
         // now the reset period off
         // now check for full reset period
-        for (i= 1; i <= ticksPerTenth(T50); i++) {
+        for (i = 1; i <= ticksPerTenth(T50); i++) {
             assertFalse(io.checkDigitalInput(1, 0));
         }
 
@@ -336,15 +328,7 @@ public class IoTest  extends AndroidTestCase {
         assertEquals(EventType.EVENT_TYPE_INPUT1_ON, service.queue.getFirstItem(Queue.SERVER_ID_PRIMARY).event_type_id);
 
 
-    } // test_checkDigitalInput_Input1()
-
-
-
-
-    int F=2; // should have turned off
-    int N=3; // should have turned on
-
-
+    } // testCheckDigitalInput_Input1()
 
     private boolean verifyPulseResult(int expectedResult, boolean actualResult,
                                       int event_type_on, int event_type_off,
@@ -357,7 +341,7 @@ public class IoTest  extends AndroidTestCase {
             } else {
                 if (test.isInQueue(event_type_off)) return false;
             }
-            if (test.isInQueue(event_type_on)) return false;
+            return !test.isInQueue(event_type_on);
         } else if (expectedResult == N) {
             if (!actualResult) return false;
             if (sendingOn) {
@@ -365,29 +349,27 @@ public class IoTest  extends AndroidTestCase {
             } else {
                 if (test.isInQueue(event_type_on)) return false;
             }
-            if (test.isInQueue(event_type_off)) return false;
+            return !test.isInQueue(event_type_off);
         } else {
             if (expectedResult == 0) if (actualResult) return false;
             if (expectedResult == 1) if (!actualResult) return false;
             if (test.isInQueue(event_type_on)) return false;
-            if (test.isInQueue(event_type_off)) return false;
+            return !test.isInQueue(event_type_off);
         }
 
-        return true;
     }
 
-
-    public void test_checkDigitalInput_Multiple() {
+    @Test
+    public void testCheckDigitalInput_Multiple() {
 
         // check multiple inputs at the same time, each with different settings
 
-        final int T0 = 0 *  IoService.INPUT_POLL_PERIOD_TENTHS;
+        final int T0 = 0 * IoService.INPUT_POLL_PERIOD_TENTHS;
         final int T10 = 2 * IoService.INPUT_POLL_PERIOD_TENTHS;
-        final int T15 = 3 *  IoService.INPUT_POLL_PERIOD_TENTHS;
-        final int T20 = 4 *  IoService.INPUT_POLL_PERIOD_TENTHS;
-        final int T25 = 5 *  IoService.INPUT_POLL_PERIOD_TENTHS;
+        final int T15 = 3 * IoService.INPUT_POLL_PERIOD_TENTHS;
+        final int T20 = 4 * IoService.INPUT_POLL_PERIOD_TENTHS;
+        final int T25 = 5 * IoService.INPUT_POLL_PERIOD_TENTHS;
         final int T30 = 6 * IoService.INPUT_POLL_PERIOD_TENTHS;
-
 
 
         //Config Parameters: bias, 1/10 seconds on, 1/10 seconds reset delay, seconds awake, messages,default debounce off
@@ -417,20 +399,20 @@ public class IoTest  extends AndroidTestCase {
         //  N = Logically On, F = Logically Off, R = Input is Reset
         // 0 = is off, 1 = is on
 
-        int[] physicalInput1 = { 0,0,1,1,1,1,1,0,0,0,1,1,1,0,0,0,0,0,0,0,1,1 };
+        int[] physicalInput1 = {0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1};
         // Logical State:      F       N         F                   R     N
-        int[] resultInput1=    { 0,0,0,N,1,1,1,1,F,0,0,0,0,0,0,0,0,0,0,0,0,N };
+        int[] resultInput1 = {0, 0, 0, N, 1, 1, 1, 1, F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, N};
 
-        int[] physicalInput3 = { 0,0,0,1,1,1,1,1,1,1,0,0,0,1,1,1,1,1,0,0,0,0 }; // remember this is set as active-low
+        int[] physicalInput3 = {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0}; // remember this is set as active-low
         // Logical State:      F     N     F                       R     N
-        int[] resultInput3=    { 0,0,N,1,1,F,0,0,0,0,0,0,0,0,0,0,0,0,0,0,N,1 };
+        int[] resultInput3 = {0, 0, N, 1, 1, F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, N, 1};
 
-        int[] physicalInput5 = { 0,0,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1 };
+        int[] physicalInput5 = {0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
         // Logical State:      F           N       FR      N
-        int[] resultInput5=    { 0,0,0,0,0,N,1,1,1,F,0,0,0,N,1,1,1,1,1,1,1,1 };
+        int[] resultInput5 = {0, 0, 0, 0, 0, N, 1, 1, 1, F, 0, 0, 0, N, 1, 1, 1, 1, 1, 1, 1, 1};
 
         boolean input1R, input3R, input5R;
-        for (i=0 ; i < physicalInput1.length; i++) {
+        for (i = 0; i < physicalInput1.length; i++) {
 
             service.queue.clearAll();
 
@@ -448,24 +430,22 @@ public class IoTest  extends AndroidTestCase {
 
     } // test_checkDigitalInput_Multiple()
 
-
-    public void test_checkDigitalInput_PulsedInput() {
+    @Test
+    public void testCheckDigitalInput_PulsedInput() {
 
         // test with a pulsing input where the debounce-on is less than the debounce-off
 
-        final int T0 = 0 *  IoService.INPUT_POLL_PERIOD_TENTHS;
+        final int T0 = 0 * IoService.INPUT_POLL_PERIOD_TENTHS;
         final int T10 = 2 * IoService.INPUT_POLL_PERIOD_TENTHS;
-        final int T15 = 3 *  IoService.INPUT_POLL_PERIOD_TENTHS;
-        final int T20 = 4 *  IoService.INPUT_POLL_PERIOD_TENTHS;
-        final int T25 = 5 *  IoService.INPUT_POLL_PERIOD_TENTHS;
+        final int T15 = 3 * IoService.INPUT_POLL_PERIOD_TENTHS;
+        final int T20 = 4 * IoService.INPUT_POLL_PERIOD_TENTHS;
+        final int T25 = 5 * IoService.INPUT_POLL_PERIOD_TENTHS;
         final int T30 = 6 * IoService.INPUT_POLL_PERIOD_TENTHS;
-
 
 
         //Config Parameters: bias, 1/10 seconds on, 1/10 seconds reset delay, seconds awake, messages
         service.config.writeSetting(Config.SETTING_INPUT_GP1, "1|" + T10 + "|" + T30 + "|10|3|" + T20);
         service.config.writeSetting(Config.SETTING_INPUT_GP6, "1|" + T10 + "|" + T30 + "|10|3|" + T20);
-
 
 
         assertFalse((io.status.input_bitfield & ~Io.INPUT_BITVALUE_IGNITION) != 0);
@@ -486,17 +466,17 @@ public class IoTest  extends AndroidTestCase {
         //  N = Logically On , F = Logically Off, R = Input is Reset
         // 0 = is off, 1 = is on
 
-        int[] physicalInput1 = { 0,0,1,0,1,1,0,0,1,1,0,0,1,1,0,0,0,0,0,1,1,0 };
+        int[] physicalInput1 = {0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0};
         // Logical State:      F       N                           FR
-        int[] resultInput1=    { 0,0,0,0,0,N,1,1,1,1,1,1,1,1,1,1,1,F,0,0,0,0 };
+        int[] resultInput1 = {0, 0, 0, 0, 0, N, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, F, 0, 0, 0, 0};
 
-        int[] physicalInput6 = { 0,0,1,0,1,1,0,0,1,1,0,0,1,1,0,0,0,0,0,1,1,0 };
+        int[] physicalInput6 = {0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0};
         // Logical State:      F       N                           FR
-        int[] resultInput6=    { 0,0,0,0,0,N,1,1,1,1,1,1,1,1,1,1,1,F,0,0,0,0 };
+        int[] resultInput6 = {0, 0, 0, 0, 0, N, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, F, 0, 0, 0, 0};
 
 
         boolean input1R, input6R;
-        for (i=0 ; i < physicalInput1.length; i++) {
+        for (i = 0; i < physicalInput1.length; i++) {
 
             service.queue.clearAll();
             input1R = io.checkDigitalInput(1, (physicalInput1[i]));
@@ -506,23 +486,21 @@ public class IoTest  extends AndroidTestCase {
             assertTrue("iter=" + i, verifyPulseResult(resultInput6[i], input6R, EventType.EVENT_TYPE_INPUT6_ON, EventType.EVENT_TYPE_INPUT6_OFF, true, true));
 
 
-
         } // each pulse
 
 
     } // test_checkDigitalInput_PulsedInput()
 
-
-
-    public void test_checkDigitalInput_Bias() {
+    @Test
+    public void testCheckDigitalInput_Bias() {
 
         // test the bias (float-detection) of inputs
 
-        final int T0 = 0 *  IoService.INPUT_POLL_PERIOD_TENTHS;
+        final int T0 = 0 * IoService.INPUT_POLL_PERIOD_TENTHS;
         final int T10 = 2 * IoService.INPUT_POLL_PERIOD_TENTHS;
-        final int T15 = 3 *  IoService.INPUT_POLL_PERIOD_TENTHS;
-        final int T20 = 4 *  IoService.INPUT_POLL_PERIOD_TENTHS;
-        final int T25 = 5 *  IoService.INPUT_POLL_PERIOD_TENTHS;
+        final int T15 = 3 * IoService.INPUT_POLL_PERIOD_TENTHS;
+        final int T20 = 4 * IoService.INPUT_POLL_PERIOD_TENTHS;
+        final int T25 = 5 * IoService.INPUT_POLL_PERIOD_TENTHS;
         final int T30 = 6 * IoService.INPUT_POLL_PERIOD_TENTHS;
 
 
@@ -551,41 +529,36 @@ public class IoTest  extends AndroidTestCase {
         //  N = Logically On, F = Logically Off, R = Input is Reset
         // 0 = is off, 1 = is on
 
-        int[] physicalInput4 = { 0,0,1,1,1,1,1,2,2,0,1,1,1,0,0,2,0,0,2,2,1,1 };
+        int[] physicalInput4 = {0, 0, 1, 1, 1, 1, 1, 2, 2, 0, 1, 1, 1, 0, 0, 2, 0, 0, 2, 2, 1, 1};
         // Logical State:      F       N         F                   R     N
-        int[] resultInput4=    { 0,0,0,N,1,1,1,1,F,0,0,0,0,0,0,0,0,0,0,0,0,N };
+        int[] resultInput4 = {0, 0, 0, N, 1, 1, 1, 1, F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, N};
 
-        int[] physicalInput5 = { 1,0,0,1,2,1,1,2,1,2,2,0,0,0,2,2,2,1,0,0,2,2 }; // remember this is set as active-low
+        int[] physicalInput5 = {1, 0, 0, 1, 2, 1, 1, 2, 1, 2, 2, 0, 0, 0, 2, 2, 2, 1, 0, 0, 2, 2}; // remember this is set as active-low
         // Logical State:      F     N   F             R N                R
-        int[] resultInput5=    { 0,0,N,1,F,0,0,0,0,0,0,0,N,1,1,F,0,0,0,0,0,0 };
+        int[] resultInput5 = {0, 0, N, 1, F, 0, 0, 0, 0, 0, 0, 0, N, 1, 1, F, 0, 0, 0, 0, 0, 0};
 
-        int[] physicalInput6 = { 1,0,0,1,2,1,1,2,1,2,2,0,0,0,2,2,2,1,0,0,2,2 }; // remember this is set as active-low
+        int[] physicalInput6 = {1, 0, 0, 1, 2, 1, 1, 2, 1, 2, 2, 0, 0, 0, 2, 2, 2, 1, 0, 0, 2, 2}; // remember this is set as active-low
         // Logical State:      F     N   F             R N                R
-        int[] resultInput6=    { 0,0,N,1,F,0,0,0,0,0,0,0,N,1,1,F,0,0,0,0,0,0 };
+        int[] resultInput6 = {0, 0, N, 1, F, 0, 0, 0, 0, 0, 0, 0, N, 1, 1, F, 0, 0, 0, 0, 0, 0};
 
         boolean input4R, input5R, input6R;
-        for (i=0 ; i < physicalInput4.length; i++) {
+        for (i = 0; i < physicalInput4.length; i++) {
 
             service.queue.clearAll();
 
-            input4R = io.checkDigitalInput(4, (physicalInput4[i] == 2 ? IoService.HW_INPUT_FLOAT : physicalInput4[i]));
-            input5R = io.checkDigitalInput(5, (physicalInput5[i] == 2 ? IoService.HW_INPUT_FLOAT : physicalInput5[i]));
-            input6R = io.checkDigitalInput(6, (physicalInput6[i] == 2 ? IoService.HW_INPUT_FLOAT : physicalInput6[i]));
-
+            input4R = io.checkDigitalInput(4, (physicalInput4[i] == 2 ? IoServiceHardwareWrapper.HW_INPUT_FLOAT : physicalInput4[i]));
+            input5R = io.checkDigitalInput(5, (physicalInput5[i] == 2 ? IoServiceHardwareWrapper.HW_INPUT_FLOAT : physicalInput5[i]));
+            input6R = io.checkDigitalInput(6, (physicalInput6[i] == 2 ? IoServiceHardwareWrapper.HW_INPUT_FLOAT : physicalInput6[i]));
 
             assertTrue("iter=" + i, verifyPulseResult(resultInput4[i], input4R, EventType.EVENT_TYPE_INPUT4_ON, EventType.EVENT_TYPE_INPUT4_OFF, true, true));
             assertTrue("iter=" + i, verifyPulseResult(resultInput5[i], input5R, EventType.EVENT_TYPE_INPUT5_ON, EventType.EVENT_TYPE_INPUT5_OFF, true, true));
             assertTrue("iter=" + i, verifyPulseResult(resultInput6[i], input6R, EventType.EVENT_TYPE_INPUT6_ON, EventType.EVENT_TYPE_INPUT6_OFF, true, true));
-
-
         } // each pulse
-
 
     } // test_checkDigitalInput_Bias()
 
-
-
-    public void test_setEngineStatus() {
+    @Test
+    public void testSetEngineStatus() {
         // Configuration Engine Status: 1/10 volts, messages
         service.config.writeSetting(Config.SETTING_ENGINE_STATUS, "132|1");
 
@@ -627,7 +600,6 @@ public class IoTest  extends AndroidTestCase {
         }
 
     }  // test_setEngineStatus()
-
 
 
 } // class IoTest

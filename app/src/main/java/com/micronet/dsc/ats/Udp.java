@@ -12,6 +12,8 @@
 package com.micronet.dsc.ats;
 
 
+import android.net.TrafficStats;
+
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
@@ -27,6 +29,8 @@ public class Udp {
 
 
     public static final String TAG = "ATS-Udp";
+
+    private static final int STATS_TAG = 9347723;
 
     List<Codec.IncomingMessage> incomingList = Collections.synchronizedList(new ArrayList<Codec.IncomingMessage>());
     List<Codec.OutgoingMessage> outgoingList = Collections.synchronizedList(new ArrayList<Codec.OutgoingMessage>());
@@ -148,6 +152,7 @@ public class Udp {
         public void run() {
 
             DatagramSocket socket;
+            TrafficStats.setThreadStatsTag(STATS_TAG);
 
             // open a new socket.
             try {

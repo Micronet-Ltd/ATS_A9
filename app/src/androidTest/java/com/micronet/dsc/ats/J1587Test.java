@@ -5,29 +5,35 @@
 
 package com.micronet.dsc.ats;
 
-import android.test.AndroidTestCase;
-import android.test.RenamingDelegatingContext;
+import android.content.Context;
+import android.os.Looper;
 
-//import com.micronet.canbus.CanbusFrame;
-//import com.micronet.canbus.CanbusFrameType;
-//import com.micronet.canbus.J1708Frame;
+import androidx.test.platform.app.InstrumentationRegistry;
+
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.util.Arrays;
 
-/**
- * Created by dschmidt on 2/1/16.
- */
-public class J1587Test extends AndroidTestCase {
-    private MainService service;
-    private J1587 j1587;
-    TestCommon test;
+import static org.junit.Assert.*;
 
-    public void setUp() {
-        RenamingDelegatingContext context
-                = new RenamingDelegatingContext(getContext(), "test_");
+public class J1587Test {
+    private static TestCommon test;
+    private static MainService service;
+    private static J1587 j1587;
+    private static Config config;
+    private static State state;
 
-        Config config = new Config(context);
-        State state = new State(context);
+    @BeforeClass
+    public static void setUp() {
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        if (Looper.myLooper() == null) {
+            Looper.prepare();
+        }
+
+        config = new Config(context);
+        state = new State(context);
 
         // clear config and state info to the default before init'ing IO
         config.open();
@@ -42,15 +48,17 @@ public class J1587Test extends AndroidTestCase {
         service.clearEventSequenceIdNow();
 
         test = new TestCommon(service.queue);
-
-
     } // setup
 
+    @Before
+    public void beforeTest() {
+        config.clearAll();
+        state.clearAll();
 
-    public void tearDown() throws Exception {
+        service.queue.clearAll();
+        service.clearEventSequenceIdNow();
 
-
-        super.tearDown();
+        test = new TestCommon(service.queue);
     }
 
     /////////////////////////////////////////////////////////
@@ -61,20 +69,19 @@ public class J1587Test extends AndroidTestCase {
 
         if (j1587.outgoingList.isEmpty()) return false;
         J1587.J1708Frame f;
-        for (int i= 0 ; i < j1587.outgoingList.size(); i++) {
+        for (int i = 0; i < j1587.outgoingList.size(); i++) {
             f = j1587.outgoingList.get(i);
-            if ( ((f.id & 0xFFFFFF) == (frameId & 0xFFFFFF)) &&
+            if (((f.id & 0xFFFFFF) == (frameId & 0xFFFFFF)) &&
                     (Arrays.equals(f.data, data))
-                    )
+            )
                 return true; // it's here!
         }
         return false;
 
     } // isInJ1708Queue()
 
-
-
-    public void test_receiveOdometer() {
+    @Test
+    public void testReceiveOdometer() {
         // test the ability of the code to receive an Odometer value
 
         // Setup
@@ -95,12 +102,12 @@ public class J1587Test extends AndroidTestCase {
         frame = new J1587.J1708Frame();
         frame.priority = 5;
         frame.id = 0x80;
-        frame.data = new byte[] {(byte) J1587.PID_ODOMETER, 4, (byte) 0xAC, 0x50, 0x60, (byte) 0x82};
+        frame.data = new byte[]{(byte) J1587.PID_ODOMETER, 4, (byte) 0xAC, 0x50, 0x60, (byte) 0x82};
 
         int[] results = j1587.receiveJ1708Frame(frame);
         assertNotNull(results);
         assertEquals(results.length, 1);
-        assertEquals(results[0], j1587.PID_ODOMETER); // 2 means parsed as control packet
+        assertEquals(results[0], J1587.PID_ODOMETER); // 2 means parsed as control packet
         assertTrue(j1587.outgoingList.isEmpty()); // No Response needed
 
         assertEquals(0x826050ACL * 161, j1587.engine.status.odometer_m); // conversion to meters
@@ -108,8 +115,8 @@ public class J1587Test extends AndroidTestCase {
 
     } // test_receiveOdometer()
 
-
-    public void test_receiveFuelConsumption() {
+    @Test
+    public void testReceiveFuelConsumption() {
         // test the ability of the code to receive an Odometer value
 
         // Setup
@@ -129,12 +136,12 @@ public class J1587Test extends AndroidTestCase {
         frame = new J1587.J1708Frame();
         frame.priority = 5;
         frame.id = 0x80;
-        frame.data =  new byte[] {(byte) J1587.PID_FUEL_CONSUMPTION, 4, (byte) 0xFF, 0x30, 0x40, (byte) 0x80};
+        frame.data = new byte[]{(byte) J1587.PID_FUEL_CONSUMPTION, 4, (byte) 0xFF, 0x30, 0x40, (byte) 0x80};
 
         int[] results = j1587.receiveJ1708Frame(frame);
         assertNotNull(results);
         assertEquals(results.length, 1);
-        assertEquals(results[0], j1587.PID_FUEL_CONSUMPTION); // 2 means parsed as control packet
+        assertEquals(results[0], J1587.PID_FUEL_CONSUMPTION); // 2 means parsed as control packet
         assertTrue(j1587.outgoingList.isEmpty()); // No Response needed
 
         assertEquals(0x804030FFL * 473, j1587.engine.status.fuel_mL); // conversion to mL
@@ -142,8 +149,8 @@ public class J1587Test extends AndroidTestCase {
 
     } // test_receiveFuelConsumption()
 
-
-    public void test_receiveDiagnostics() {
+    @Test
+    public void testReceiveDiagnostics() {
         // test the ability of the code to receive Diagnostic Codes
 
         // Setup
@@ -164,12 +171,12 @@ public class J1587Test extends AndroidTestCase {
         frame = new J1587.J1708Frame();
         frame.priority = 5;
         frame.id = 0x80;
-        frame.data = new byte[] {(byte) J1587.PID_DIAGNOSTICS, 2, 0x64, (byte) 0x35 };
+        frame.data = new byte[]{(byte) J1587.PID_DIAGNOSTICS, 2, 0x64, (byte) 0x35};
 
         results = j1587.receiveJ1708Frame(frame);
         assertNotNull(results);
         assertEquals(results.length, 1);
-        assertEquals(results[0], j1587.PID_DIAGNOSTICS);
+        assertEquals(results[0], J1587.PID_DIAGNOSTICS);
         assertTrue(j1587.outgoingList.isEmpty()); // No Response needed
 
 
@@ -190,12 +197,12 @@ public class J1587Test extends AndroidTestCase {
         frame = new J1587.J1708Frame();
         frame.priority = 5;
         frame.id = 0x81;
-        frame.data = new byte[] {(byte) J1587.PID_DIAGNOSTICS, 7, 0x64, 0x35, 0x62, (byte) 0xB3, 0x05, 0x61, 0x34 };
+        frame.data = new byte[]{(byte) J1587.PID_DIAGNOSTICS, 7, 0x64, 0x35, 0x62, (byte) 0xB3, 0x05, 0x61, 0x34};
 
         results = j1587.receiveJ1708Frame(frame);
         assertNotNull(results);
         assertEquals(results.length, 1);
-        assertEquals(results[0], j1587.PID_DIAGNOSTICS);
+        assertEquals(results[0], J1587.PID_DIAGNOSTICS);
         assertTrue(j1587.outgoingList.isEmpty()); // No Response neede
 
 
@@ -220,12 +227,12 @@ public class J1587Test extends AndroidTestCase {
         frame = new J1587.J1708Frame();
         frame.priority = 5;
         frame.id = 0x81;
-        frame.data = new byte[] {(byte) J1587.PID_DIAGNOSTICS, 2, 0x62, 0x33 };
+        frame.data = new byte[]{(byte) J1587.PID_DIAGNOSTICS, 2, 0x62, 0x33};
 
         results = j1587.receiveJ1708Frame(frame);
         assertNotNull(results);
         assertEquals(results.length, 1);
-        assertEquals(results[0], j1587.PID_DIAGNOSTICS);
+        assertEquals(results[0], J1587.PID_DIAGNOSTICS);
         assertTrue(j1587.outgoingList.isEmpty()); // No Response neede
 
         assertEquals(j1587.collectedDtcs.size(), 4);
@@ -241,12 +248,12 @@ public class J1587Test extends AndroidTestCase {
         frame = new J1587.J1708Frame();
         frame.priority = 5;
         frame.id = 0x80;
-        frame.data = new byte[] {(byte) J1587.PID_DIAGNOSTICS, 2, 0x10, 0x20 };
+        frame.data = new byte[]{(byte) J1587.PID_DIAGNOSTICS, 2, 0x10, 0x20};
 
         results = j1587.receiveJ1708Frame(frame);
         assertNotNull(results);
         assertEquals(results.length, 1);
-        assertEquals(results[0], j1587.PID_DIAGNOSTICS);
+        assertEquals(results[0], J1587.PID_DIAGNOSTICS);
         assertTrue(j1587.outgoingList.isEmpty()); // No Response needed
 
 
@@ -262,13 +269,13 @@ public class J1587Test extends AndroidTestCase {
 
         frame = new J1587.J1708Frame();
         frame.priority = 5;
-        frame.id =  0x80;
-        frame.data = new byte[] {(byte) J1587.PID_DIAGNOSTICS, 0 };
+        frame.id = 0x80;
+        frame.data = new byte[]{(byte) J1587.PID_DIAGNOSTICS, 0};
 
         results = j1587.receiveJ1708Frame(frame);
         assertNotNull(results);
         assertEquals(results.length, 1);
-        assertEquals(results[0], j1587.PID_DIAGNOSTICS);
+        assertEquals(results[0], J1587.PID_DIAGNOSTICS);
         assertTrue(j1587.outgoingList.isEmpty()); // No Response needed
 
 
@@ -277,7 +284,8 @@ public class J1587Test extends AndroidTestCase {
 
     } // test_receiveDiagnostics()
 
-    public void test_receiveLamps() {
+    @Test
+    public void testReceiveLamps() {
         // test the ability of the code to receive Lamp Status
 
         // Setup
@@ -308,7 +316,7 @@ public class J1587Test extends AndroidTestCase {
         results = j1587.receiveJ1708Frame(frame);
         assertNotNull(results);
         assertEquals(results.length, 1);
-        assertEquals(results[0], j1587.PID_LAMPS);
+        assertEquals(results[0], J1587.PID_LAMPS);
         assertTrue(j1587.outgoingList.isEmpty()); // No Response needed
 
 
@@ -321,12 +329,12 @@ public class J1587Test extends AndroidTestCase {
         frame = new J1587.J1708Frame();
         frame.priority = 5;
         frame.id = 0x81;
-        frame.data = new byte[] {(byte) J1587.PID_LAMPS, (byte) 0xFF };
+        frame.data = new byte[]{(byte) J1587.PID_LAMPS, (byte) 0xFF};
 
         results = j1587.receiveJ1708Frame(frame);
         assertNotNull(results);
         assertEquals(results.length, 1);
-        assertEquals(results[0], j1587.PID_LAMPS);
+        assertEquals(results[0], J1587.PID_LAMPS);
         assertTrue(j1587.outgoingList.isEmpty()); // No Response neede
 
 
@@ -338,19 +346,20 @@ public class J1587Test extends AndroidTestCase {
         frame = new J1587.J1708Frame();
         frame.priority = 5;
         frame.id = 0x81;
-        frame.data = new byte[] {(byte) J1587.PID_LAMPS, (byte) 0xF1 };
+        frame.data = new byte[]{(byte) J1587.PID_LAMPS, (byte) 0xF1};
 
         results = j1587.receiveJ1708Frame(frame);
         assertNotNull(results);
         assertEquals(results.length, 1);
-        assertEquals(results[0], j1587.PID_LAMPS);
+        assertEquals(results[0], J1587.PID_LAMPS);
         assertTrue(j1587.outgoingList.isEmpty()); // No Response neede
 
 
         assertEquals(j1587.collectedLampsBf, 1 | 4); // 1 = Protect, 4 = Red
     } // test_receiveLamps()
 
-    public void test_receiveVIN() {
+    @Test
+    public void testReceiveVIN() {
         // test the ability of the code to receive an Odometer value
 
         // Setup
@@ -370,12 +379,12 @@ public class J1587Test extends AndroidTestCase {
         frame = new J1587.J1708Frame();
         frame.priority = 8;
         frame.id = 0x80;
-        frame.data = new byte[] {(byte) 237, 17, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 0x50, 0x51};
+        frame.data = new byte[]{(byte) 237, 17, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 0x50, 0x51};
 
         int[] results = j1587.receiveJ1708Frame(frame);
         assertNotNull(results);
         assertEquals(results.length, 1);
-        assertEquals(results[0], j1587.PID_VIN); // 2 means parsed as control packet
+        assertEquals(results[0], J1587.PID_VIN); // 2 means parsed as control packet
         assertTrue(j1587.outgoingList.isEmpty()); // No Response needed
 
         assertEquals(j1587.engine.vin, "ABCDEFGHIJKLMNOPQ");

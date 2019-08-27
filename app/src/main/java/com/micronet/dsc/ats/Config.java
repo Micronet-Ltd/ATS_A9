@@ -33,7 +33,7 @@ public class Config {
     //private static final String FILENAME_ALTERNATE_PATH = "/internal_Storage/ATS";
 
     public static final String[] FILENAME_ALTERNATE_PATHS = {
-            "/internal_Storage/ATS", // directory on the Android 4.0 A-317 series
+            "/sdcard/ATS", // directory on the Android 4.0 A-317 series
             "/storage/sdcard0/ATS" // directory on the Android 5.0 OBC series
         };
 
@@ -321,7 +321,7 @@ public class Config {
         String s = sharedPref.getString(Integer.toString(setting_id), null);
 
         if (s == null) {
-            Log.i(TAG,"Using default value for setting " + setting_id + " = " + defaultValue);
+            Log.vv(TAG,"Using default value for setting " + setting_id + " = " + defaultValue);
             return defaultValue;
         }
         return s;

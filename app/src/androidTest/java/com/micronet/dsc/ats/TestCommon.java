@@ -26,7 +26,7 @@ public class TestCommon {
         List<QueueItem> queueList = queue.getAllItems();
 
         if (queueList.isEmpty()) return false;
-        for (int i= 0 ; i < queueList.size(); i++) {
+        for (int i = 0; i < queueList.size(); i++) {
             if (queueList.get(i).event_type_id == event_type_id) return true; // it's here!
         }
         return false;

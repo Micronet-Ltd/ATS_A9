@@ -5,26 +5,21 @@
 
 package com.micronet.dsc.ats;
 
-import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
-import android.os.Build;
 import android.os.IBinder;
-import android.content.Context;
-
-// For notification and Foreground processing
-
-import android.app.Service;
-import 	android.app.Notification;
-import 	android.app.Notification.Builder;
 
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import android.os.StrictMode;
 import android.os.SystemClock;
+import android.support.v4.app.NotificationCompat;
 
 
 public class MainService extends Service {
@@ -67,7 +62,7 @@ public class MainService extends Service {
 
     ///////////////////////////////////////////
     // Build Flavors -- these are used in the code to determine the flavor. They should match gradle
-    public static final String BUILD_FLAVOR_A317 = "a317";
+    public static final String BUILD_FLAVOR_TAB8 = "tab8";
     public static final String BUILD_FLAVOR_OBC5 = "obc5";
 
 
@@ -79,6 +74,10 @@ public class MainService extends Service {
     public static final String TAG = "ATS-Service";
 
     public static final String SERVICE_ACTION_WD_RESTART = "wdrestart";
+    public static final String APP_NAME = "ATS";
+    public static final String ATS_CHANNEL_DESCRIPTION = "ATS description channel.";
+    public static final String ATS_NOTIFICATION_DESCRIPTION = "is running";
+    public static final String CHANNEL_ID = "com.micronet.dsc.ats_notifications";
 
     public static final int ONGOING_NOTIFICATION_ID = 12345; // unique ID for the foreground notification
 
@@ -637,18 +636,19 @@ public class MainService extends Service {
                 myIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT);
 
-        Notification noti = new Notification.Builder(context)
-                .setContentTitle("ATS")
-                .setContentText("is running")
-                .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentIntent(pendingIntent)
-                        //.setLargeIcon(aBitmap)
-                // Android 4.1 or newer: use build()
-                //      .build();
-                // Android 4.0 or older: use getNotification()
-                .getNotification();
+        NotificationChannel notificationChannel = new NotificationChannel(CHANNEL_ID, APP_NAME, NotificationManager.IMPORTANCE_DEFAULT);
+        notificationChannel.setDescription(ATS_CHANNEL_DESCRIPTION);
+        NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        notificationManager.createNotificationChannel(notificationChannel);
 
-        startForeground(ONGOING_NOTIFICATION_ID, noti);
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentTitle(APP_NAME)
+                .setContentText(ATS_NOTIFICATION_DESCRIPTION)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setContentIntent(pendingIntent);
+
+        startForeground(ONGOING_NOTIFICATION_ID, builder.build());
     }
 
     //////////////////////////////////////////////////////////////////

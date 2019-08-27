@@ -5,13 +5,12 @@
 
 package com.micronet.dsc.ats;
 
+import android.os.Build;
 import android.os.SystemClock;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import micronet.hardware.MicronetHardware;
-
-public class IoServiceHardwareWrapper {
+public abstract class IoServiceHardwareWrapper {
 
     static final String TAG = "ATS-IOS-Wrap";
 
@@ -60,7 +59,7 @@ public class IoServiceHardwareWrapper {
     static volatile int inHardwareCall;  // ints are always atmoic
     static volatile AtomicLong hardwareCallElapsedStart = new AtomicLong();
 
-    static micronet.hardware.MicronetHardware hardware = null;
+//    static micronet.hardware.MicronetHardware hardware = null;
 
 
 
@@ -84,63 +83,65 @@ public class IoServiceHardwareWrapper {
         Log.vv(TAG, "io_call: " + (SystemClock.elapsedRealtime() - getElapsedStart()) + " " + name);
     }
 
-    static micronet.hardware.MicronetHardware getIoInstance() {
+//    static micronet.hardware.MicronetHardware getIoInstance() {
+//
+//        hardware = null;
+//        beginCall();
+//        try {
+//            hardware = micronet.hardware.MicronetHardware.getInstance();
+//        } catch (Exception e) {
+//            Log.e(TAG, "Exception when trying to getInstance() of Micronet Hardware API");
+//            hardware = null;
+//        }
+//        endCall("getInstance()");
+//        return hardware;
+//    }
 
-        hardware = null;
+//    abstract int getAnalogInput(int analog_type); // {
+//        beginCall();
+//        int result = hardware.getAnalogInput(analog_type);
+//        endCall("getAnalogInput()");
+//        return result;
+//    }
+
+//    abstract int[] getAllAnalogInput(); // {
+//        beginCall();
+//        int[] result = hardware.getAllAnalogInput();
+//        endCall("getAllAnalogInput()");
+//        return result;
+//    }
+
+//    abstract int[] getAllPinInState(); // {
+//        beginCall();
+//        int[] result = hardware.getAllPinInState();
+//        endCall("getAllPinInState()");
+//        return result;
+//    }
+
+//    abstract int getInputState(int digital_type); // {
+//        beginCall();
+//        int result = hardware.getInputState(digital_type);
+//        endCall("getInputState()");
+//        return result;
+//    }
+
+//    static int getPowerUpIgnitionState() {
+//        beginCall();
+//        int result = hardware.getPowerUpIgnitionState();
+//        endCall("getPowerUpIgnitionState()");
+//        return result;
+//    }
+
+    static String getSerialNumber() {
         beginCall();
+
+        String result = "";
         try {
-            hardware = micronet.hardware.MicronetHardware.getInstance();
-        } catch (Exception e) {
-            Log.e(TAG, "Exception when trying to getInstance() of Micronet Hardware API");
-            hardware = null;
+            // App shouldn't start without giving permissions to READ_PHONE_STATE
+            result = Build.getSerial();
+        } catch(SecurityException se) {
+            Log.e(TAG, "Error getting serial number: " + se.toString());
         }
-        endCall("getInstance()");
-        return hardware;
-    }
-
-    static int getAnalogInput(int analog_type) {
-        beginCall();
-        int result = hardware.getAnalogInput(analog_type);
-        endCall("getAnalogInput()");
-        return result;
-    }
-
-    static int[] getAllAnalogInput() {
-        beginCall();
-        int[] result = hardware.getAllAnalogInput();
-        endCall("getAllAnalogInput()");
-        return result;
-    }
-
-    static int[] getAllPinInState() {
-        beginCall();
-        int[] result = hardware.getAllPinInState();
-        endCall("getAllPinInState()");
-        return result;
-    }
-
-    static int getInputState(int digital_type) {
-        beginCall();
-        int result = hardware.getInputState(digital_type);
-        endCall("getInputState()");
-        return result;
-    }
-
-    static int getPowerUpIgnitionState() {
-        beginCall();
-        int result = hardware.getPowerUpIgnitionState();
-        endCall("getPowerUpIgnitionState()");
-        return result;
-    }
-
-    static String GetSerialNumber() {
-        beginCall();
-
-        micronet.hardware.Info info = HardwareWrapper.getInfoInstance();
-        if (info == null) return "";
-        String result = info.GetSerialNumber();
-
-        //sleep(5000);
 
         endCall("getPowerUpIgnitionState()");
         return result;
@@ -160,7 +161,7 @@ public class IoServiceHardwareWrapper {
         Log.vv(TAG, "getHardwareDeviceId()");
 
 
-        String serial = GetSerialNumber();
+        String serial = getSerialNumber();
         if ((serial == null) || (serial.isEmpty())) {
             serial = "";
             Log.e(TAG, "getHardwareDeviceId(): serial number not found");
@@ -179,40 +180,40 @@ public class IoServiceHardwareWrapper {
     //  Calls the hardware API
     //  gets the status of the wakeup I/O at the instant A-317 was booted.
     ////////////////////////////////////////////////////////////////////
-    public static int getHardwareBootState() {
+//    public static int getHardwareBootState(); // {
 
         // We can sort of check Ignition, and Input 1,2,3 for their condition at boot time
         // Note we can only check physical state, not logical state, and we can't distinguish ignition
         //  if another input is physically high.
 
-        Log.vv(TAG, "getHardwareBootState()");
-
-
-        if (HardwareWrapper.getIoInstance() == null) {
-            Log.e(TAG, "NULL result when trying to get instance of Hardware API ");
-            return 0;
-        }
-
-        int boot_input_mask = HardwareWrapper.getPowerUpIgnitionState();
-
-        if (boot_input_mask == -1) { // error
-            Log.e(TAG, "Unable to get PowerUpIgnitionState");
-        } else {
-            // DEAL with IGNITION CONCURRENCY PROBLEM:
-            if ((boot_input_mask & 0x0E) != 0) { // INPUT1,2, or 3 was the cause
-                boot_input_mask &= 0x0E; // We cannot say for sure that Ignition was also a cause
-            } // IGNITION
-
-
-            // Normalize the boot input mask
-            boot_input_mask = HardwareWrapper.remapBootInputMask(boot_input_mask);
-
-            return boot_input_mask;
-        }
-
-        boot_input_mask = 0;  // we cannot determine that any of the inputs caused a wakeup
-        return boot_input_mask;
-    } // getHardwareBootState()
+//        Log.vv(TAG, "getHardwareBootState()");
+//
+//
+//        if (HardwareWrapper.getIoInstance() == null) {
+//            Log.e(TAG, "NULL result when trying to get instance of Hardware API ");
+//            return 0;
+//        }
+//
+//        int boot_input_mask = HardwareWrapper.getPowerUpIgnitionState();
+//
+//        if (boot_input_mask == -1) { // error
+//            Log.e(TAG, "Unable to get PowerUpIgnitionState");
+//        } else {
+//            // DEAL with IGNITION CONCURRENCY PROBLEM:
+//            if ((boot_input_mask & 0x0E) != 0) { // INPUT1,2, or 3 was the cause
+//                boot_input_mask &= 0x0E; // We cannot say for sure that Ignition was also a cause
+//            } // IGNITION
+//
+//
+//            // Normalize the boot input mask
+//            boot_input_mask = HardwareWrapper.remapBootInputMask(boot_input_mask);
+//
+//            return boot_input_mask;
+//        }
+//
+//        boot_input_mask = 0;  // we cannot determine that any of the inputs caused a wakeup
+//        return boot_input_mask;
+//    } // getHardwareBootState()
 
 
 

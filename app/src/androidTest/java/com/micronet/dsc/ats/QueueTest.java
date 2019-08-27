@@ -5,57 +5,59 @@
 
 package com.micronet.dsc.ats;
 
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
-import android.test.AndroidTestCase;
-import android.test.RenamingDelegatingContext;
+import android.content.Context;
+import android.os.Looper;
+
+import androidx.test.platform.app.InstrumentationRegistry;
+
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.util.List;
+import static org.junit.Assert.*;
 
-public class QueueTest extends AndroidTestCase {
+public class QueueTest {
 
-    private Queue q;
-    private MainService service;
+    private static int NUM_POPULATED_ITEMS = 6; // number of items populated by the populateQueue() function here:
+    private static Queue q;
+    private static MainService service;
+    private static Context context;
 
-    public void setUp(){
-        RenamingDelegatingContext context
-                = new RenamingDelegatingContext(getContext(), "test_");
-
-/*
-        MySQLiteHelper dbHelper = new MySQLiteHelper(context);
-        SQLiteDatabase db;
-        db = dbHelper.getWritableDatabase();
-        db.execSQL("DROP TABLE IF EXISTS " + Queue.TABLE_NAME);
-        db.execSQL(Queue.SQL_CREATE );
-        Cursor cursor = db.rawQuery(
-                "select * from " + Queue.TABLE_NAME + " limit 1",
-                null);
-*/
+    @BeforeClass
+    public static void setUp() {
+        context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        if (Looper.myLooper() == null) {
+            Looper.prepare();
+        }
 
         service = new MainService(context);
         q = service.queue;
-        //q = new Queue(service);
-        //q.open();
     }
 
-    public void tearDown() throws Exception{
-        q.close();
-        super.tearDown();
+    @Before
+    public void beforeTest() {
+        q.clearAll();
+        q.resetTableRowId();
     }
 
+    @AfterClass
+    public static void tearDown() {
+        if(q != null) {
+            q.close();
+        }
+    }
 
-    static int NUM_POPULATED_ITEMS = 6; // number of items populated by the populateQueue() function here:
     private void populateQueue(long now) {
-
-
         QueueItem item1 = new QueueItem();
 
         item1.sequence_id = 0x1234;
-        item1.event_type_id  = EventType.EVENT_TYPE_REBOOT;
+        item1.event_type_id = EventType.EVENT_TYPE_REBOOT;
         item1.trigger_dt = now;
         item1.latitude = 36.05145;
         assertEquals(now, item1.trigger_dt);
-        item1.trigger_dt = item1.trigger_dt-3;
+        item1.trigger_dt = item1.trigger_dt - 3;
         item1 = q.addItem(item1);
 
 
@@ -75,8 +77,8 @@ public class QueueTest extends AndroidTestCase {
         QueueItem item3 = item2.clone();
         item3.sequence_id = 0x7FFFFFFF;
         item3.sequence_id++; // roll over from 4 bytes unsigned
-        item3.event_type_id  = EventType.EVENT_TYPE_RESTART;
-        item3.trigger_dt = item2.trigger_dt+3;
+        item3.event_type_id = EventType.EVENT_TYPE_RESTART;
+        item3.trigger_dt = item2.trigger_dt + 3;
 
         item3 = q.addItem(item3);
         assertEquals(5, item3.getId());
@@ -84,9 +86,8 @@ public class QueueTest extends AndroidTestCase {
 
     } // populateQueue()
 
-
-
-    public void testEmptyQueue(){
+    @Test
+    public void testEmptyQueue() {
 
         QueueItem firstitem;
         firstitem = q.getFirstItem(Queue.SERVER_ID_PRIMARY);
@@ -95,7 +96,7 @@ public class QueueTest extends AndroidTestCase {
         assertNull(firstitem);
     }
 
-
+    @Test
     public void testAddEntry() {
 
         long now = QueueItem.getSystemDT();
@@ -109,10 +110,10 @@ public class QueueTest extends AndroidTestCase {
         assertNotNull(firstitem);
         assertEquals(1, firstitem.getId());
         assertEquals(EventType.EVENT_TYPE_REBOOT, firstitem.event_type_id);
-        assertEquals(now-3, firstitem.trigger_dt);
+        assertEquals(now - 3, firstitem.trigger_dt);
 
         // Check that the reals are also being inserted and retrieved
-        assertEquals(36.05145, firstitem.latitude);
+        assertEquals(36.05145, firstitem.latitude, 0.00001);
 
 
         // Also verify an entry was created for secondary server
@@ -120,15 +121,14 @@ public class QueueTest extends AndroidTestCase {
         firstitem = q.getFirstItem(Queue.SERVER_ID_SECONDARY);
         assertNotNull(firstitem);
         assertEquals(EventType.EVENT_TYPE_REBOOT, firstitem.event_type_id);
-        assertEquals(now-3, firstitem.trigger_dt);
-        assertEquals(36.05145, firstitem.latitude);
+        assertEquals(now - 3, firstitem.trigger_dt);
+        assertEquals(36.05145, firstitem.latitude, 0.00001);
 
 
     } // testAddEntry()
 
-
-
-    public void testRemoveEntryById(){
+    @Test
+    public void testRemoveEntryById() {
 
         long now = QueueItem.getSystemDT();
         populateQueue(now);
@@ -145,7 +145,7 @@ public class QueueTest extends AndroidTestCase {
         assertNotNull(firstitem);
         assertEquals(1, firstitem.getId());
         assertEquals(EventType.EVENT_TYPE_REBOOT, firstitem.event_type_id);
-        assertEquals(now-3, firstitem.trigger_dt);
+        assertEquals(now - 3, firstitem.trigger_dt);
 
         // or secondary server
 
@@ -154,8 +154,7 @@ public class QueueTest extends AndroidTestCase {
         assertNotNull(firstitem);
         assertEquals(2, firstitem.getId());
         assertEquals(EventType.EVENT_TYPE_REBOOT, firstitem.event_type_id);
-        assertEquals(now-3, firstitem.trigger_dt);
-
+        assertEquals(now - 3, firstitem.trigger_dt);
 
 
         // Delete first entry
@@ -178,17 +177,16 @@ public class QueueTest extends AndroidTestCase {
         assertNotNull(firstitem);
         assertEquals(2, firstitem.getId());
         assertEquals(EventType.EVENT_TYPE_REBOOT, firstitem.event_type_id);
-        assertEquals(now-3, firstitem.trigger_dt);
+        assertEquals(now - 3, firstitem.trigger_dt);
 
 
     }
 
-    public void testRemoveEntryBySequence(){
+    @Test
+    public void testRemoveEntryBySequence() {
 
         long now = QueueItem.getSystemDT();
         populateQueue(now);
-
-
 
 
         List<QueueItem> allitems;
@@ -205,22 +203,22 @@ public class QueueTest extends AndroidTestCase {
         assertNotNull(firstitem);
         assertEquals(1, firstitem.getId());
         assertEquals(EventType.EVENT_TYPE_REBOOT, firstitem.event_type_id);
-        assertEquals(now-3, firstitem.trigger_dt);
-        assertEquals(NUM_POPULATED_ITEMS , q.getAllItems().size());
+        assertEquals(now - 3, firstitem.trigger_dt);
+        assertEquals(NUM_POPULATED_ITEMS, q.getAllItems().size());
 
 
         // trying to delete something not FIRST in the queue doesn't work
         q.deleteItemBySequenceId(Queue.SERVER_ID_PRIMARY, 0x12348765, Codec.SEQUENCE_ID_RECEIVE_MASK);
         q.deleteItemBySequenceId(Queue.SERVER_ID_SECONDARY, 65536, Codec.SEQUENCE_ID_RECEIVE_MASK);
 
-        assertEquals(NUM_POPULATED_ITEMS , q.getAllItems().size());
+        assertEquals(NUM_POPULATED_ITEMS, q.getAllItems().size());
         firstitem = q.getFirstItem(Queue.SERVER_ID_PRIMARY);
 
         assertNotNull(firstitem);
         assertEquals(1, firstitem.getId());
         assertEquals(0x1234, firstitem.sequence_id);
         assertEquals(EventType.EVENT_TYPE_REBOOT, firstitem.event_type_id);
-        assertEquals(now-3, firstitem.trigger_dt);
+        assertEquals(now - 3, firstitem.trigger_dt);
 
 
         //allitems = q.getAllItems();
@@ -249,12 +247,12 @@ public class QueueTest extends AndroidTestCase {
         assertEquals(5, firstitem.getId());
         assertEquals(0x80000000, firstitem.sequence_id);
         assertEquals(EventType.EVENT_TYPE_RESTART, firstitem.event_type_id);
-        assertEquals(now+3, firstitem.trigger_dt);
+        assertEquals(now + 3, firstitem.trigger_dt);
 
         // delete last item with larger (32 bit) id works
         q.deleteItemBySequenceId(Queue.SERVER_ID_PRIMARY, 0x0, Codec.SEQUENCE_ID_RECEIVE_MASK);
 
-        assertEquals(NUM_POPULATED_ITEMS -3, q.getAllItems().size());
+        assertEquals(NUM_POPULATED_ITEMS - 3, q.getAllItems().size());
 
 
         // Secondary server is un-affected
@@ -264,7 +262,7 @@ public class QueueTest extends AndroidTestCase {
         assertNotNull(firstitem);
         assertEquals(2, firstitem.getId());
         assertEquals(EventType.EVENT_TYPE_REBOOT, firstitem.event_type_id);
-        assertEquals(now-3, firstitem.trigger_dt);
+        assertEquals(now - 3, firstitem.trigger_dt);
 
         // Remove Secondary server top-of-queue
         q.deleteItemBySequenceId(Queue.SERVER_ID_SECONDARY, 0x1234, Codec.SEQUENCE_ID_RECEIVE_MASK);
@@ -277,7 +275,8 @@ public class QueueTest extends AndroidTestCase {
 
     } // testRemoveEntryBySequence()
 
-    public void testClearAllEntry(){
+    @Test
+    public void testClearAllEntry() {
 
         long now = QueueItem.getSystemDT();
         populateQueue(now);
@@ -298,7 +297,7 @@ public class QueueTest extends AndroidTestCase {
 
     }
 
-
+    @Test
     public void testDeleteOldItems() {
         long now = QueueItem.getSystemDT();
         populateQueue(now);

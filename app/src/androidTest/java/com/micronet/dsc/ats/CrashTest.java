@@ -4,30 +4,30 @@
  */
 
 package com.micronet.dsc.ats;
-import android.os.SystemClock;
-import android.test.AndroidTestCase;
-import android.test.RenamingDelegatingContext;
 
-public class CrashTest extends AndroidTestCase {
+import android.content.Context;
+import android.os.SystemClock;
+
+import androidx.test.platform.app.InstrumentationRegistry;
+
+import org.junit.Before;
+import org.junit.Test;
+
+import static org.junit.Assert.*;
+
+public class CrashTest {
 
     Crash cr;
 
-    public void setUp(){
-
-        RenamingDelegatingContext context
-                = new RenamingDelegatingContext(getContext(), "test_");
+    @Before
+    public void setUp() {
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         cr = new Crash(context);
         cr.clearAll();
-
-    }
-
-    public void tearDown() throws Exception{
-
-        super.tearDown();
     }
 
 
-
+    @Test
     public void testRestorable() {
 
         // Since we were cleared, we are not restorable
@@ -76,54 +76,53 @@ public class CrashTest extends AndroidTestCase {
         assertFalse(cr.isRestoreable());
 
 
-
     } // testRestorable()
 
-
+    @Test
     public void testWriteArrayInt() {
 
 
         // test writing the int array
 
-        int[] iarr = {20,30,40};
+        int[] iarr = {20, 30, 40};
 
         cr.edit();
         cr.writeStateArrayInt(1, iarr);
         cr.commit();
 
 
-        String sarr[] = cr.readStateArray(1);
+        String[] sarr = cr.readStateArray(1);
 
         assertEquals(sarr.length, 3);
-        assertTrue(sarr[0].equals("20"));
-        assertTrue(sarr[1].equals("30"));
-        assertTrue(sarr[2].equals("40"));
+        assertEquals("20", sarr[0]);
+        assertEquals("30", sarr[1]);
+        assertEquals("40", sarr[2]);
 
 
     } // testWriteArrayInt()
 
+    @Test
     public void testWriteArrayLong() {
 
 
         // test writing the int array
 
-        long[] larr = {20,30, 5000000000L};
+        long[] larr = {20, 30, 5000000000L};
 
         cr.edit();
         cr.writeStateArrayLong(1, larr);
         cr.commit();
 
 
-        String sarr[] = cr.readStateArray(1);
+        String[] sarr = cr.readStateArray(1);
 
         assertEquals(sarr.length, 3);
-        assertTrue(sarr[0].equals("20"));
-        assertTrue(sarr[1].equals("30"));
-        assertTrue(sarr[2].equals("5000000000"));
+        assertEquals("20", sarr[0]);
+        assertEquals("30", sarr[1]);
+        assertEquals("5000000000", sarr[2]);
 
 
     } // testWriteArrayLong()
-
 
 
 } // class

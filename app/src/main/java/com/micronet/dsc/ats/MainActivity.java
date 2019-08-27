@@ -5,39 +5,95 @@
 
 package com.micronet.dsc.ats;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.res.Resources;
+import android.content.pm.PackageManager;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.StrictMode;
-//import android.support.v7.app.ActionBarActivity;
-import android.os.Bundle;
-import android.text.method.ScrollingMovementMethod;
+import android.support.v4.app.ActivityCompat;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
-import 	android.widget.Toast;
-import 	android.content.Context;
-
-import java.text.DateFormat;
-import java.util.Date;
-import java.util.List;
-import java.util.TimeZone;
+import android.widget.Toast;
 
 public class MainActivity extends Activity {
-
     public static final String TAG = "ATS-Activity";
-
-
     public static final boolean SHOW_ACTIVITY = false; // enable this for testing, disable for production
+    public static final int PERMISSIONS_REQUEST_CODE = 38459834;
 
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        Log.v(TAG, "onCreate()");
+
+        // TODO: Can system apps access fine location without permissions? I don't think so.
+        if (arePermissionsGranted()){
+            // Permissions already granted, start application.
+            Log.v(TAG, "Permissions already granted to application.");
+            finishSetUp();
+        } else {
+            // Permissions not granted yet, request for permissions.
+            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    Manifest.permission.READ_PHONE_STATE}, PERMISSIONS_REQUEST_CODE);
+        }
+    } // onCreate()
+
+    private boolean arePermissionsGranted() {
+        return ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void finishSetUp() {
+        // All we want to do is launch the service, toast the user, and exit
+        Context context = getApplicationContext();
+        Intent i = new Intent(context, MainService.class);
+        context.startService(i);
+        Toast.makeText(context, "ATS Service is activated", Toast.LENGTH_SHORT).show();
+
+        // To show debug UI change SHOW_ACTIVITY to true and uncomment other needed code.
+        // TODO: Clean up debugging UI code.
+        if (!SHOW_ACTIVITY) {
+            finish();
+        } else {
+            displayDebuggingUserInterface();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == PERMISSIONS_REQUEST_CODE) {
+            if (permissions.length > 0 &&
+                    permissions[0].equals(Manifest.permission.ACCESS_FINE_LOCATION) &&
+                    grantResults[0] == PackageManager.PERMISSION_GRANTED &&
+                    permissions[1].equals(Manifest.permission.WRITE_EXTERNAL_STORAGE) &&
+                    grantResults[1] == PackageManager.PERMISSION_GRANTED &&
+                    permissions[2].equals(Manifest.permission.READ_PHONE_STATE) &&
+                    grantResults[2] == PackageManager.PERMISSION_GRANTED) {
+                finishSetUp();
+            } else {
+                Log.e(TAG, "Permissions not granted by user. Not starting ATS service. Exiting.");
+                Toast.makeText(getApplicationContext(), "Permissions not granted. Not starting ATS service.", Toast.LENGTH_SHORT).show();
+                finish();
+            }
+        }
+    }
+
+    ////////////////////////////////////////
+    // UI Debugging
+    ////////////////////////////////////////
+
+    Button buttonVoltage;
     CheckBox checkBoxOverride;
     CheckBox checkBoxIgnition;
     CheckBox checkBoxInput1;
@@ -46,32 +102,11 @@ public class MainActivity extends Activity {
     CheckBox checkBoxInput4;
     CheckBox checkBoxInput5;
     CheckBox checkBoxInput6;
-    Button buttonVoltage;
     EditText editVoltage;
     TextView textLog;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-
-
-        Log.v(TAG,"onCreate()");
-
-
-        // All we want to do is launch the service, toast the user, and exit
-
-        Context context = getApplicationContext();
-        Intent i = new Intent(context, MainService.class);
-        context.startService(i);
-
-        Toast.makeText(context, "ATS Service is activated", Toast.LENGTH_SHORT).show();
-
-
-        // To show the debug-activity screen comment out the finish and return lines;
-        if (!SHOW_ACTIVITY) {
-            super.onCreate(savedInstanceState);
-            finish();
-        } else {
-/*
+    private void displayDebuggingUserInterface(){
+        /*
             setTheme(R.style.AppTheme);
 
             super.onCreate(savedInstanceState);
@@ -249,11 +284,6 @@ public class MainActivity extends Activity {
                 }
             });
 */
-
-        }
-
-
-
     } // onCreate()
 
 
@@ -286,7 +316,9 @@ public class MainActivity extends Activity {
 
         // Bind to LocalService
         Intent intent = new Intent(this, MainService.class);
+        // TODO: What is the correct way to do this?
         bindService(intent, mConnection, Context.BIND_WAIVE_PRIORITY);
+        mBound = true;
 
         Log.callbackInterface = myLogCallback;
     } // onStart()
@@ -503,7 +535,9 @@ public class MainActivity extends Activity {
         public void show(final String tag, final String text) {
             MainActivity.this.runOnUiThread(new Runnable() {
                 public void run() {
-                    textLog.append("\n" + tag + ": " + text);
+                    if (textLog != null) {
+                        textLog.append("\n" + tag + ": " + text);
+                    }
                 }
             });
         } // show

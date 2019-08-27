@@ -347,6 +347,14 @@ public class Queue {
         database.execSQL("delete from " + TABLE_NAME);
     } // clearAll()
 
+    ////////////////////////////////////
+    // resetTableRowId()
+    //   only used during testing
+    ////////////////////////////////////
+    public void resetTableRowId() {
+        // Reset row id to 0
+        database.execSQL("delete from sqlite_sequence where name='" + Queue.TABLE_NAME + "'");
+    }
 
 	////////////////////////////////////////////////
     ////////////////////////////////////////////////

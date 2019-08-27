@@ -27,7 +27,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import micronet.hardware.MicronetHardware;
 
 /**
  * Created by dschmidt on 2/25/16.

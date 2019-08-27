@@ -5,84 +5,37 @@
 
 package com.micronet.dsc.ats;
 
-import android.test.AndroidTestCase;
-import android.test.RenamingDelegatingContext;
+import android.content.Context;
+import androidx.test.platform.app.InstrumentationRegistry;
 
-public class ConfigTest  extends AndroidTestCase {
+import org.junit.Before;
+import org.junit.Test;
 
-    Config cf;
+import static org.junit.Assert.*;
 
-    public void setUp(){
-        RenamingDelegatingContext context
-                = new RenamingDelegatingContext(getContext(), "test_");
+public class ConfigTest {
+    private Config cf;
+
+    @Before
+    public void setUp() {
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         cf = new Config(context);
         cf.open();
         cf.clearAll();
     }
 
-    public void tearDown() throws Exception{
-
-        super.tearDown();
-    }
-
-/*
-    public void testParseParameter() {
-
-        String res;
-
-        res= cf.parseParameter("", 0);
-        assertNull(res);
-        res= cf.parseParameter("", 5);
-        assertNull(res);
-
-        res= cf.parseParameter("Hello", 0);
-        assertEquals("Hello", res);
-
-        res= cf.parseParameter("Hello", 1);
-        assertNull(res);
-
-        res= cf.parseParameter("Hello", 2);
-        assertNull(res);
-
-        res= cf.parseParameter("Red|Blue", 0);
-        assertEquals("Red", res);
-
-        res= cf.parseParameter("Red|Blue", 1);
-        assertEquals("Blue", res);
-
-        res= cf.parseParameter("Red|Blue", 2);
-        assertNull(res);
-
-        res= cf.parseParameter("Red|Blue|", 1);
-        assertEquals("Blue", res);
-
-
-        res= cf.parseParameter("|Apple||Orange|", 0);
-        assertNull(res);
-        res= cf.parseParameter("|Apple||Orange|", 1);
-        assertEquals("Apple", res);
-        res= cf.parseParameter("|Apple||Orange|", 2);
-        assertNull(res);
-        res= cf.parseParameter("|Apple||Orange|", 3);
-        assertEquals("Orange", res);
-        res= cf.parseParameter("|Apple||Orange|", 4);
-        assertNull(res);
-
-    } // testParseParameter()
-*/
-
+    @Test
     public void testBadSettingIds() {
-
         assertNull(cf.readSetting(999999));
         assertNull(cf.readSetting(-1));
-        assertNull(cf.readParameter(0,99999));
-        assertNull(cf.readParameter(0,-1));
+        assertNull(cf.readParameter(0, 99999));
+        assertNull(cf.readParameter(0, -1));
 
         assertFalse(cf.writeSetting(99999, "XXXXX"));
         assertFalse(cf.writeSetting(-1, "XXXXX"));
-
     }
 
+    @Test
     public void testReadDefaults() {
 
         // Read Entire Setting Value
@@ -108,7 +61,7 @@ public class ConfigTest  extends AndroidTestCase {
         // Read an Array of setting values
 
         String[] message_type_array = cf.readParameterArray(Config.SETTING_BACKOFF_RETRIES);
-        assertTrue(message_type_array.length == 7);
+        assertEquals(message_type_array.length,7);
         assertEquals("10", message_type_array[0]);
         assertEquals("10", message_type_array[1]);
         assertEquals("15", message_type_array[2]);
@@ -124,7 +77,7 @@ public class ConfigTest  extends AndroidTestCase {
 
     } // testReadDefaults()
 
-
+    @Test
     public void testWrite() {
 
         cf.writeSetting(Config.SETTING_SERVER_ADDRESS, "1.1.1.1|2222");
@@ -138,8 +91,7 @@ public class ConfigTest  extends AndroidTestCase {
         assertEquals("2222", port);
     } // testReadDefaults()
 
-
-
+    @Test
     public void testReadNotANumber() {
 
         // if we expect a number from a config parameter and we get something else, we should treat it like 0.

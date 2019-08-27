@@ -3,7 +3,6 @@
 .DS_Store
 /build
 /.idea/*
-a300keys.properties
-obc5keys.properties
+*.properties
 *.keystore
 *.iml

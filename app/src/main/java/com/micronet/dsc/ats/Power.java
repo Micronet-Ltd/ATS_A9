@@ -823,28 +823,30 @@ public class Power {
             return;
         }
 
-        if (BuildConfig.FLAVOR_DEVICE.equals(MainService.BUILD_FLAVOR_OBC5)) {
-            Log.i(TAG, "*** Airplane Mode Control Ignored = " + on + " (OBC HW does not control Airplane Mode)");
-            return;
-        }
+        // TODO: Make sure, but Tab8 probably doesn't have control of airplane mode.
+        return;
+//        if (BuildConfig.FLAVOR_DEVICE.equals(MainService.BUILD_FLAVOR_OBC5)) {
+//            Log.i(TAG, "*** Airplane Mode Control Ignored = " + on + " (OBC HW does not control Airplane Mode)");
+//            return;
+//        }
 
-		Log.i(TAG, "Setting Airplane Mode = " + on);
-
-        // Toggle airplane mode.
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            Settings.System.putInt(
-                    service.context.getContentResolver(),
-                    Settings.System.AIRPLANE_MODE_ON, on ? 1 : 0);
-        } else {
-            Settings.Global.putInt(
-                    service.context.getContentResolver(),
-                    Settings.Global.AIRPLANE_MODE_ON, on ? 1 : 0);
-        }
-
-        // Post an intent to reload.
-        Intent intent = new Intent(Intent.ACTION_AIRPLANE_MODE_CHANGED);
-        intent.putExtra("state", on);
-        service.context.sendBroadcast(intent);
+//		Log.i(TAG, "Setting Airplane Mode = " + on);
+//
+//        // Toggle airplane mode.
+//        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1) {
+//            Settings.System.putInt(
+//                    service.context.getContentResolver(),
+//                    Settings.System.AIRPLANE_MODE_ON, on ? 1 : 0);
+//        } else {
+//            Settings.Global.putInt(
+//                    service.context.getContentResolver(),
+//                    Settings.Global.AIRPLANE_MODE_ON, on ? 1 : 0);
+//        }
+//
+//        // Post an intent to reload.
+//        Intent intent = new Intent(Intent.ACTION_AIRPLANE_MODE_CHANGED);
+//        intent.putExtra("state", on);
+//        service.context.sendBroadcast(intent);
 
     } // setAirplaneMode
 
