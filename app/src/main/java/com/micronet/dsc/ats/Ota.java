@@ -962,10 +962,6 @@ public class Ota {
             return false; // we have no connection to an acceptable data network
         }
 
-        // TODO: signal strength check ?
-        //   A: don't do this for now as the platform has problems reporting the correct signal strength (Apr2014)
-
-
         // Make sure that the IO is fully initialized
 
         if (!service.io.isFullyInitialized()) {

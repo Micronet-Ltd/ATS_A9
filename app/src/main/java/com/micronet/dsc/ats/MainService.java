@@ -987,7 +987,7 @@ public class MainService extends Service {
                         // restart the io service process
                         io.restartIosProcess();
                     }else{
-                        Log.d(TAG, "Device is undocked. Not restarting IO.");
+                        Log.vv(TAG, "Device is undocked. Not restarting IO.");
                     }
 
                     //io.killIoService();

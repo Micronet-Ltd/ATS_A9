@@ -23,7 +23,6 @@ public class AtsApplication extends Application {
         // Update config files if needed
         copyAlternateConfigFiles();
 
-        // TODO: Make instrumented test to make sure this is correct and config bug isn't happening.
         // In ATS built for OBC5 and Tab5 (Android 5), this class was called for every different process that was made for this app.
         // This is different on the Tab8 with Android 9. It only calls this class once.
         // This app has three different processes: MainService, Io, and Watchdog.

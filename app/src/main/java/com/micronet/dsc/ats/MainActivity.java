@@ -34,7 +34,6 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         Log.v(TAG, "onCreate()");
 
-        // TODO: Can system apps access fine location without permissions? I don't think so.
         if (arePermissionsGranted()){
             // Permissions already granted, start application.
             Log.v(TAG, "Permissions already granted to application.");

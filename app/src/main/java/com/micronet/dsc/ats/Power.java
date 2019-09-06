@@ -815,39 +815,7 @@ public class Power {
     //  turns airplane mode off or on
     /////////////////////////////////////////////////////////////////////////////////
     void setAirplaneMode(boolean on) {
-
-        // Note, this code will not work with or above android version 4.2 API 17 JELLYBEAN1
-
-        if (MainService.DEBUG_DO_NOT_CONTROL_AIRPLANE_MODE) {
-            Log.i(TAG, "*** Airplane Mode Control Ignored = " + on + " (MainService.DEBUG_DO_NOT_CONTROL_AIRPLANE_MODE flag is set)");
-            return;
-        }
-
-        // TODO: Make sure, but Tab8 probably doesn't have control of airplane mode.
-        return;
-//        if (BuildConfig.FLAVOR_DEVICE.equals(MainService.BUILD_FLAVOR_OBC5)) {
-//            Log.i(TAG, "*** Airplane Mode Control Ignored = " + on + " (OBC HW does not control Airplane Mode)");
-//            return;
-//        }
-
-//		Log.i(TAG, "Setting Airplane Mode = " + on);
-//
-//        // Toggle airplane mode.
-//        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1) {
-//            Settings.System.putInt(
-//                    service.context.getContentResolver(),
-//                    Settings.System.AIRPLANE_MODE_ON, on ? 1 : 0);
-//        } else {
-//            Settings.Global.putInt(
-//                    service.context.getContentResolver(),
-//                    Settings.Global.AIRPLANE_MODE_ON, on ? 1 : 0);
-//        }
-//
-//        // Post an intent to reload.
-//        Intent intent = new Intent(Intent.ACTION_AIRPLANE_MODE_CHANGED);
-//        intent.putExtra("state", on);
-//        service.context.sendBroadcast(intent);
-
+        Log.i(TAG, "*** Airplane Mode Control Ignored = " + on + " (HW does not control Airplane Mode)");
     } // setAirplaneMode
 
 
@@ -929,11 +897,11 @@ public class Power {
     boolean isScreenOn() {
         PowerManager pm = (PowerManager) service.context.getSystemService(Context.POWER_SERVICE);
         if (pm != null) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT_WATCH) {
-                return pm.isScreenOn();
-            } else {
-                return pm.isInteractive();
-            }
+//            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT_WATCH) {
+//                return pm.isScreenOn();
+//            } else {
+            return pm.isInteractive();
+//            }
         }
         return false; // assume screen not on if we can't tell
     }
@@ -950,7 +918,7 @@ public class Power {
 
         // SCREEN locks are deprecated after version 17
         // cause the screen to turn on if it is not already on when we acquire the lock
-        screenlock = pm.newWakeLock((PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.SCREEN_DIM_WAKE_LOCK), "ATS-ScreenLock");
+        screenlock = pm.newWakeLock((PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.SCREEN_DIM_WAKE_LOCK), "ATS:ScreenLock");
         screenlock.acquire();
 
     } // acquireScreenLock()

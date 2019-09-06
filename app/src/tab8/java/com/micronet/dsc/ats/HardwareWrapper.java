@@ -115,7 +115,6 @@ public class HardwareWrapper extends IoServiceHardwareWrapper {
         Log.vv(TAG, "getAllHardwareInputs()");
         long start_now = SystemClock.elapsedRealtime();
 
-        // TODO: Can't get input voltages yet.
         HardwareInputResults hardwareInputResults = new HardwareInputResults();
         hardwareInputResults.savedTime = start_now;
 
@@ -130,7 +129,7 @@ public class HardwareWrapper extends IoServiceHardwareWrapper {
             } else {
                 Log.v(TAG, " Input results " + Arrays.toString(allInputs));
 
-                // TODO: Figure out how to get the input voltage on Tab8 and change this
+                // TODO: Change default input voltage to cradle
                 hardwareInputResults.voltage = 12.0;
 
                 hardwareInputResults.input1 = getHardwareInput(allInputs[1], 1);
@@ -184,9 +183,10 @@ public class HardwareWrapper extends IoServiceHardwareWrapper {
     public static HardwareInputResults getHardwareVoltageOnly() {
         Log.vv(TAG, "getHardwareVoltage()");
         long start_now = SystemClock.elapsedRealtime();
-        // TODO: Temporary change.
+
         HardwareInputResults hardwareVoltageResults = new HardwareInputResults();
         hardwareVoltageResults.savedTime = start_now;
+        // TODO: Change to default input voltage value
         hardwareVoltageResults.voltage = 12.0;
         return hardwareVoltageResults;
 
@@ -292,7 +292,7 @@ public class HardwareWrapper extends IoServiceHardwareWrapper {
 
     public static int getHardwareBootState() {
         beginCall();
-        // TODO: Implement boot state
+        // TODO: Not sure we can get boot state on Tab8
         endCall("getHardwareBootState()");
         return 0;
     }

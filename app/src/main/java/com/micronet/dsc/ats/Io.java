@@ -1270,70 +1270,92 @@ public class Io {
     // DockStateReceiver()
     //   Receives the dock state and any changes to dock state
     //////////////////////////////////////////////////////////
-    DockStateReceiver dockStateReceiver = new DockStateReceiver();
+    private AtomicInteger temporaryDockState = new AtomicInteger(-1);
+    private Handler dockStateHandler = new Handler();
+    private DockStateReceiver dockStateReceiver = new DockStateReceiver();
+    private final int DOCK_STATE_DELAY = 5000;
+
     class DockStateReceiver extends BroadcastReceiver {
-
         @Override
-        public void onReceive(Context context, Intent intent)
-        {
-            try {
-                Log.vv(TAG, "dockStateReceiver()");
+        public void onReceive(Context context, Intent intent) {
+            // Temporarily store dock state for wait period
+            temporaryDockState.set(intent.getIntExtra(Intent.EXTRA_DOCK_STATE, -1));
+            Log.vv(TAG, "dockStateReceiver() " + temporaryDockState.get());
 
-                // Get the current dock state
-                int dockState = intent.getIntExtra(Intent.EXTRA_DOCK_STATE, -1);
-                Log.v(TAG, "Dock state is: " + dockState);
+            // Store that dock state has changed
+            lastDockStateChange.set(SystemClock.elapsedRealtime());
 
-                if(dockState < 0){
-                    Log.e(TAG, "Invalid dock state: " + dockState);
-                }else{
-                    status.dock_state = (byte) (dockState&0xFF);
-                    int previousDockState = service.state.readState(State.DOCK_STATE);
-                    service.state.writeState(State.DOCK_STATE, dockState);
+            // Remove any previous callbacks (for ex. if we are receiving 3-4 dock events for 1 event)
+            dockStateHandler.removeCallbacks(handleDockStateRunnable);
 
-                    if(dockState == EXTRA_DOCK_STATE_UNDOCKED){ // Ignition unknown
-                        // If undocked then make an infinite wakelock so device doesn't shutdown
-                        dockStateWakeLock = service.power.changeWakeLock(WAKELOCK_DOCK_NAME, dockStateWakeLock, 0);
-                        Log.d(TAG, "Ignition unknown.");
-                        ignitionState.set(-1);
-                    } else if (dockState == EXTRA_DOCK_STATE_CAR) { // Ignition high
-                        Log.d(TAG, "Ignition high.");
-                        ignitionState.set(1);
-                    } else { // Ignition low
-                        Log.d(TAG, "Ignition low.");
-                        ignitionState.set(0);
-                    }
-
-                    // If device has gone from undocked to docked
-                    if(previousDockState == 0 && dockState > 0){
-                        lastDockStateChange.set(SystemClock.elapsedRealtime());
-
-                        service.addEventWithExtra(EventType.EVENT_TYPE_DEVICE_DOCKED, dockState);
-
-                        dockStateWakeLock = service.power.changeWakeLock(WAKELOCK_DOCK_NAME, dockStateWakeLock, 600);
-						
-						Log.v(TAG, "restarting io polling begin");
-                        start(false); //Reenbling io polling since MCU connection has been reestablished
-                        Log.v(TAG, "restarting io polling end");
-                    }else if(previousDockState > 0 && dockState == 0){ // If docked and then changed to undocked
-                        lastDockStateChange.set(SystemClock.elapsedRealtime());
-
-                        // Set warm start to false
-                        service.engine.setWarmStart(false);
-                        service.addEventWithExtra(EventType.EVENT_TYPE_DEVICE_UNDOCKED, dockState);
-						
-						Log.v(TAG, "stopping io polling begin");
-                        stop(false); //disabling io polling since MCU connection has been disconnected
-                        // Set warm start to false
-                        Log.v(TAG, "stopping io polling end");
-                    }
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "dockStateReceiver Exception " + e.toString(), e);
-            }
-
+            // Handle dock state in five seconds
+            dockStateHandler.postDelayed(handleDockStateRunnable, DOCK_STATE_DELAY);
         } // onReceive()
     } // DockStateReceiver()
 
+    private Runnable handleDockStateRunnable = new Runnable() {
+        @Override
+        public void run() {
+            handleDockState();
+        }
+    };
+
+    private void handleDockState() {
+        try {
+            // Get the current dock state
+            Log.vv(TAG, "Now handling dock state after 5 second wait.");
+
+            int dockState = temporaryDockState.get();
+            Log.v(TAG, "Dock state is: " + dockState);
+
+            if(dockState < 0){
+                Log.e(TAG, "Invalid dock state: " + dockState);
+            }else{
+                status.dock_state = (byte) (dockState&0xFF);
+                int previousDockState = service.state.readState(State.DOCK_STATE);
+                service.state.writeState(State.DOCK_STATE, dockState);
+
+                if(dockState == EXTRA_DOCK_STATE_UNDOCKED){ // Ignition unknown
+                    // If undocked then make an infinite wakelock so device doesn't shutdown
+                    dockStateWakeLock = service.power.changeWakeLock(WAKELOCK_DOCK_NAME, dockStateWakeLock, 0);
+                    Log.d(TAG, "Ignition unknown.");
+                    ignitionState.set(-1);
+                } else if (dockState == EXTRA_DOCK_STATE_CAR) { // Ignition high
+                    Log.d(TAG, "Ignition high.");
+                    ignitionState.set(1);
+                } else { // Ignition low
+                    Log.d(TAG, "Ignition low.");
+                    ignitionState.set(0);
+                }
+
+                // If device has gone from undocked to docked
+                if(previousDockState == 0 && dockState > 0){
+                    lastDockStateChange.set(SystemClock.elapsedRealtime());
+
+                    service.addEventWithExtra(EventType.EVENT_TYPE_DEVICE_DOCKED, dockState);
+
+                    dockStateWakeLock = service.power.changeWakeLock(WAKELOCK_DOCK_NAME, dockStateWakeLock, 600);
+
+                    Log.v(TAG, "restarting io polling begin");
+                    start(false); //Reenbling io polling since MCU connection has been reestablished
+                    Log.v(TAG, "restarting io polling end");
+                }else if(previousDockState > 0 && dockState == 0){ // If docked and then changed to undocked
+                    lastDockStateChange.set(SystemClock.elapsedRealtime());
+
+                    // Set warm start to false
+                    service.engine.setWarmStart(false);
+                    service.addEventWithExtra(EventType.EVENT_TYPE_DEVICE_UNDOCKED, dockState);
+
+                    Log.v(TAG, "stopping io polling begin");
+                    stop(false); //disabling io polling since MCU connection has been disconnected
+                    // Set warm start to false
+                    Log.v(TAG, "stopping io polling end");
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "dockStateReceiver Exception " + e.toString(), e);
+        }
+    }
 
     private Runnable delayedEngineOnTask  = new Runnable() {
         @Override

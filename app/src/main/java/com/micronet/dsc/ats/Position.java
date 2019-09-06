@@ -175,6 +175,8 @@ public class Position {
                 Log.d(TAG, "Satellites: ttff = " + String.valueOf(timetofix) + "; " + satellites + " sats total; " + satellitesInFix + " sats used");
 
                 savedLocation.remember(satellites, satellitesInFix);
+            } catch (SecurityException se) {
+                Log.e(TAG, "Security Exception. OnGpsStatusChanged exception " + se.toString(), se);
             } catch (Exception e) {
                 Log.e(TAG, "OnGpsStatusChanged exception " + e.toString(), e);
             }
@@ -387,6 +389,8 @@ public class Position {
         try {
             LocationManager locationManager = (LocationManager) service.context.getSystemService(Context.LOCATION_SERVICE);
             location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        } catch (SecurityException se) {
+            Log.e(TAG, "Security Exception. Unable to access last known location: " + se.getMessage());
         } catch (Exception e) {
             Log.e(TAG, "Unable to access last known location: " + e.getMessage());
         }
@@ -432,6 +436,8 @@ public class Position {
                         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 250, 0, locationListener); // every 250 ms
                         locationManager.addGpsStatusListener(gpsStatusListener);
 
+                    } catch (SecurityException se) {
+                        Log.e(TAG, "Security Exception. Unable to start location service updates: " + se.getMessage());
                     } catch (Exception e) {
                         Log.e(TAG, "Unable to start location service updates: " + e.getMessage());
                     }
