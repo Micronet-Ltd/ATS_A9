@@ -143,7 +143,7 @@ public class HardwareWrapper extends IoServiceHardwareWrapper {
                 // Get ignition
                 int ignitionInput = getHardwareInput(allInputs[0], 0);
 //                int ignitionInput = Io.ignitionState.get();
-                Log.e(TAG, "Hardware Wrapper ignition state: " + ignitionInput);
+                Log.d(TAG, "Hardware Wrapper ignition state: " + ignitionInput);
                 if (ignitionInput != -1) {
                     hardwareInputResults.ignition_valid = true;
                     hardwareInputResults.ignition_input = ignitionInput == 1;
