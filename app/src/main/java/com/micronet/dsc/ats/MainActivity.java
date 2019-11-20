@@ -34,15 +34,17 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         Log.v(TAG, "onCreate()");
 
-        if (arePermissionsGranted()){
-            // Permissions already granted, start application.
-            Log.v(TAG, "Permissions already granted to application.");
-            finishSetUp();
-        } else {
-            // Permissions not granted yet, request for permissions.
-            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                    Manifest.permission.READ_PHONE_STATE}, PERMISSIONS_REQUEST_CODE);
-        }
+        finishSetUp();
+
+//        if (arePermissionsGranted()){
+//            // Permissions already granted, start application.
+//            Log.v(TAG, "Permissions already granted to application.");
+
+//        } else {
+//            // Permissions not granted yet, request for permissions.
+//            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.WRITE_EXTERNAL_STORAGE,
+//                    Manifest.permission.READ_PHONE_STATE}, PERMISSIONS_REQUEST_CODE);
+//        }
     } // onCreate()
 
     private boolean arePermissionsGranted() {

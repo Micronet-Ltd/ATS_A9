@@ -14,6 +14,7 @@ package com.micronet.dsc.ats;
 
 import android.content.Intent;
 import android.os.Handler;
+import android.os.Process;
 import android.os.SystemClock;
 
 public class LocalMessage {
@@ -32,6 +33,7 @@ public class LocalMessage {
     // Raw Bus messages are sent when raw bus data matches the filters
     public static final String BROADCAST_MESSAGE_RAWBUS = "com.micronet.dsc.ats.vehicle.raw";
 
+    public static final String BROADCAST_MESSAGE_VIN = "com.micronet.dsc.ats.device.vin";
 
     public static final int PERIODIC_TIMER_MS = 1000; // broadcast once per second
 
@@ -173,7 +175,7 @@ public class LocalMessage {
         ibroadcast.putExtra("virtualOdometerMeters", posStatus.virtual_odometer_m);
         ibroadcast.putExtra("continuousIdlingSeconds", posStatus.continuous_idling_s);
 
-        service.context.sendBroadcast(ibroadcast);
+        service.context.sendBroadcastAsUser(ibroadcast, Process.myUserHandle());
     } // sendPeriodicDeviceMessage()
 
 
@@ -199,6 +201,10 @@ public class LocalMessage {
         ibroadcast.putExtra("fuelConsumptionMilliliters", engineStatus.fuel_mL);
         ibroadcast.putExtra("fuelEconomyMetersPerLiter", engineStatus.fuel_mperL);
         ibroadcast.putExtra("lampsBitfield",engineStatus.lamps_bf);
+        ibroadcast.putExtra("speed", engineStatus.vehicleSpeed);
+        ibroadcast.putExtra("engineHours", engineStatus.engineHours);
+        ibroadcast.putExtra("speed", engineStatus.vehicleSpeed);
+        ibroadcast.putExtra("VIN", J1939.vin);
 
         // Add DTCs
 

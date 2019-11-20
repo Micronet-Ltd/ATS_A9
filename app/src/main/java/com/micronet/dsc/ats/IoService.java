@@ -16,7 +16,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.IBinder;
+import android.os.Process;
 import android.os.SystemClock;
+import android.os.UserHandle;
+import android.provider.Settings;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -235,7 +238,7 @@ public class IoService extends Service {
 
         ibroadcast.setPackage(context.getPackageName());
         ibroadcast.putExtra("processId", processId);
-        context.sendBroadcast(ibroadcast);
+        context.sendBroadcastAsUser(ibroadcast, Process.myUserHandle());
     }
 
     public void broadcastInit(int io_scheme,
@@ -353,7 +356,7 @@ public class IoService extends Service {
         ibroadcast.putExtra("savedTime", hir.savedTime);
 
 
-        context.sendBroadcast(ibroadcast);
+        context.sendBroadcastAsUser(ibroadcast, Process.myUserHandle());
 
 
     } // broadcastInputs()
