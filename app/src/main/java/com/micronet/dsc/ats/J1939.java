@@ -2234,7 +2234,7 @@ public class J1939 extends EngineBus {
         serviceIntent.putExtra(VehicleBusConstants.SERVICE_EXTRA_HARDWAREFILTER_IDS, ids);
         serviceIntent.putExtra(VehicleBusConstants.SERVICE_EXTRA_HARDWAREFILTER_MASKS, masks);
 
-        engine.service.context.startService(serviceIntent);
+        engine.service.context.startForegroundService(serviceIntent);
 
     } // startCANBus()
 
@@ -2255,7 +2255,7 @@ public class J1939 extends EngineBus {
         serviceIntent.setAction(VehicleBusConstants.SERVICE_ACTION_STOP);
         serviceIntent.putExtra(VehicleBusConstants.SERVICE_EXTRA_BUS, "CAN");
 
-        engine.service.context.startService(serviceIntent);
+        engine.service.context.startForegroundService(serviceIntent);
 
         busTxIsReady = false;
     } // stopCANBus()

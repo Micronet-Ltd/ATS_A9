@@ -1450,7 +1450,7 @@ public class Engine {
         serviceIntent.setPackage(VehicleBusConstants.PACKAGE_NAME_VBS);
         serviceIntent.setAction(VehicleBusConstants.SERVICE_ACTION_RESTART);
 
-        service.context.startService(serviceIntent);
+        service.context.startForegroundService(serviceIntent);
     }
 
 

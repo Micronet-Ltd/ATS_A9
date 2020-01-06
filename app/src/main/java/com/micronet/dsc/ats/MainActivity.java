@@ -34,17 +34,16 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         Log.v(TAG, "onCreate()");
 
-        finishSetUp();
-
-//        if (arePermissionsGranted()){
-//            // Permissions already granted, start application.
-//            Log.v(TAG, "Permissions already granted to application.");
-
-//        } else {
-//            // Permissions not granted yet, request for permissions.
-//            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.WRITE_EXTERNAL_STORAGE,
-//                    Manifest.permission.READ_PHONE_STATE}, PERMISSIONS_REQUEST_CODE);
-//        }
+        if (arePermissionsGranted()){
+            // Permissions already granted, start application.
+            Log.v(TAG, "Permissions already granted to application.");
+            copyAlternateConfigFiles();
+            finishSetUp();
+        } else {
+            // Permissions not granted yet, request for permissions.
+            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    Manifest.permission.READ_PHONE_STATE}, PERMISSIONS_REQUEST_CODE);
+        }
     } // onCreate()
 
     private boolean arePermissionsGranted() {
@@ -81,12 +80,25 @@ public class MainActivity extends Activity {
                     grantResults[1] == PackageManager.PERMISSION_GRANTED &&
                     permissions[2].equals(Manifest.permission.READ_PHONE_STATE) &&
                     grantResults[2] == PackageManager.PERMISSION_GRANTED) {
+                copyAlternateConfigFiles();
                 finishSetUp();
             } else {
                 Log.e(TAG, "Permissions not granted by user. Not starting ATS service. Exiting.");
                 Toast.makeText(getApplicationContext(), "Permissions not granted. Not starting ATS service.", Toast.LENGTH_SHORT).show();
                 finish();
             }
+        }
+    }
+
+    public void copyAlternateConfigFiles() {
+        int config_files_updated = Config.init();
+        int eventcode_files_updated = CodeMap.init();
+
+        // now, if we did something, we should remember this in the state file so that we can
+        //  generate a message the next time the ATS service starts (which could be right away if that is how we got here)
+        if ((config_files_updated | eventcode_files_updated) != 0) {
+            State state = new State(getApplicationContext());
+            state.setFlags(State.PRECHANGED_CONFIG_FILES_BF, config_files_updated | eventcode_files_updated);
         }
     }
 
