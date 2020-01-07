@@ -16,6 +16,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.support.v4.app.ActivityCompat;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
@@ -28,6 +29,8 @@ public class MainActivity extends Activity {
     public static final String TAG = "ATS-Activity";
     public static final boolean SHOW_ACTIVITY = false; // enable this for testing, disable for production
     public static final int PERMISSIONS_REQUEST_CODE = 38459834;
+    //Flag to state if a new configuration file is detected.
+    public static boolean isNewConfig = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,7 +41,7 @@ public class MainActivity extends Activity {
             // Permissions already granted, start application.
             Log.v(TAG, "Permissions already granted to application.");
             copyAlternateConfigFiles();
-            finishSetUp();
+            finishSetUp(isNewConfig);
         } else {
             // Permissions not granted yet, request for permissions.
             requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.WRITE_EXTERNAL_STORAGE,
@@ -52,12 +55,26 @@ public class MainActivity extends Activity {
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
     }
 
-    private void finishSetUp() {
+    private void finishSetUp(boolean isNewConfig) {
         // All we want to do is launch the service, toast the user, and exit
         Context context = getApplicationContext();
         Intent i = new Intent(context, MainService.class);
         context.startService(i);
-        Toast.makeText(context, "ATS Service is activated", Toast.LENGTH_SHORT).show();
+        Toast toast;
+        TextView toastTextView;
+        Log.d(TAG, "isNewConfig = " + isNewConfig);
+        if (isNewConfig){
+            toast = Toast.makeText(context, "ATS Service is activated" + "\n new configuration.xml detected", Toast.LENGTH_LONG);
+            toastTextView = toast.getView().findViewById(android.R.id.message);
+            if(toastTextView!=null) toastTextView.setGravity(Gravity.CENTER);
+            toast.show();
+
+        }else{
+            toast = Toast.makeText(context, "ATS Service is activated", Toast.LENGTH_LONG);
+            toastTextView = toast.getView().findViewById(android.R.id.message);
+            if(toastTextView!=null) toastTextView.setGravity(Gravity.CENTER);
+            toast.show();
+        }
 
         // To show debug UI change SHOW_ACTIVITY to true and uncomment other needed code.
         // TODO: Clean up debugging UI code.
@@ -81,7 +98,7 @@ public class MainActivity extends Activity {
                     permissions[2].equals(Manifest.permission.READ_PHONE_STATE) &&
                     grantResults[2] == PackageManager.PERMISSION_GRANTED) {
                 copyAlternateConfigFiles();
-                finishSetUp();
+                finishSetUp(copyAlternateConfigFiles());
             } else {
                 Log.e(TAG, "Permissions not granted by user. Not starting ATS service. Exiting.");
                 Toast.makeText(getApplicationContext(), "Permissions not granted. Not starting ATS service.", Toast.LENGTH_SHORT).show();
@@ -90,18 +107,23 @@ public class MainActivity extends Activity {
         }
     }
 
-    public void copyAlternateConfigFiles() {
+
+    public boolean copyAlternateConfigFiles() {
         int config_files_updated = Config.init();
         int eventcode_files_updated = CodeMap.init();
 
         // now, if we did something, we should remember this in the state file so that we can
-        //  generate a message the next time the ATS service starts (which could be right away if that is how we got here)
+        // generate a message the next time the ATS service starts (which could be right away if that is how we got here)
         if ((config_files_updated | eventcode_files_updated) != 0) {
             State state = new State(getApplicationContext());
+            Log.d(TAG, "New Configuration file detected.");
             state.setFlags(State.PRECHANGED_CONFIG_FILES_BF, config_files_updated | eventcode_files_updated);
+            isNewConfig = true;
+            return isNewConfig;
+        }else{
+            return isNewConfig;
         }
     }
-
     ////////////////////////////////////////
     // UI Debugging
     ////////////////////////////////////////
