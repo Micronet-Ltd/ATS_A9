@@ -40,8 +40,6 @@ public class BootReceiver extends BroadcastReceiver {
         // Send intent to service (and start if needed)
         Intent i = new Intent(context, MainService.class);
         i.putExtra(Power.BOOT_REQUEST_NAME, 1);
-        context.startService(i);
-
+        context.startForegroundService(i);
     }
-
 } // class
