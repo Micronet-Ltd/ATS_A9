@@ -14,6 +14,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class ConfigTest {
+    private static final String TAG = "ConfigTest";
     private Config cf;
 
     @Before
@@ -48,6 +49,7 @@ public class ConfigTest {
         // Read just one parameter from a setting value
 
         String ip = cf.readParameter(Config.SETTING_SERVER_ADDRESS, 0);
+        Log.d(TAG, "ip = " + ip);
         String port = cf.readParameter(Config.SETTING_SERVER_ADDRESS, 1);
 
         assertEquals("10.0.2.2", ip);
