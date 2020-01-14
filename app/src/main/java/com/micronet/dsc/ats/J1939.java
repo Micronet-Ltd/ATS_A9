@@ -2226,6 +2226,8 @@ public class J1939 extends EngineBus {
         serviceIntent.setPackage(VehicleBusConstants.PACKAGE_NAME_VBS);
         serviceIntent.setAction(VehicleBusConstants.SERVICE_ACTION_START);
 
+            Log.d(TAG, "Try to start: " + VehicleBusConstants.BROADCAST_STATUS); /**Testing**/
+
         serviceIntent.putExtra(VehicleBusConstants.SERVICE_EXTRA_BUS, "CAN");
         serviceIntent.putExtra(VehicleBusConstants.SERVICE_EXTRA_BITRATE, bitrate);
         //serviceIntent.putExtra("listenOnly", listenOnly);
