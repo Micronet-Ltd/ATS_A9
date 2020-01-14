@@ -55,15 +55,15 @@ public class MainActivity extends Activity {
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
     }
 
-    private void finishSetUp(boolean isNewConfig) {
+    private void finishSetUp(boolean newConfig) {
         // All we want to do is launch the service, toast the user, and exit
         Context context = getApplicationContext();
         Intent i = new Intent(context, MainService.class);
-        context.startService(i);
+        context.startForegroundService(i);
         Toast toast;
         TextView toastTextView;
-        Log.d(TAG, "isNewConfig = " + isNewConfig);
-        if (isNewConfig){
+        Log.d(TAG, "newConfig = " + newConfig);
+        if (newConfig){
             toast = Toast.makeText(context, "ATS Service is activated" + "\n new configuration.xml detected", Toast.LENGTH_LONG);
             toastTextView = toast.getView().findViewById(android.R.id.message);
             if(toastTextView!=null) toastTextView.setGravity(Gravity.CENTER);
@@ -98,7 +98,7 @@ public class MainActivity extends Activity {
                     permissions[2].equals(Manifest.permission.READ_PHONE_STATE) &&
                     grantResults[2] == PackageManager.PERMISSION_GRANTED) {
                 copyAlternateConfigFiles();
-                finishSetUp(copyAlternateConfigFiles());
+                finishSetUp(isNewConfig);
             } else {
                 Log.e(TAG, "Permissions not granted by user. Not starting ATS service. Exiting.");
                 Toast.makeText(getApplicationContext(), "Permissions not granted. Not starting ATS service.", Toast.LENGTH_SHORT).show();
@@ -109,6 +109,9 @@ public class MainActivity extends Activity {
 
 
     public boolean copyAlternateConfigFiles() {
+        // Reset isNewConfig back to false in case activity is run again.
+        isNewConfig = false;
+
         int config_files_updated = Config.init();
         int eventcode_files_updated = CodeMap.init();
 
