@@ -67,6 +67,10 @@ public final class VehicleBusConstants {
     //      use with START action only
     public static final String SERVICE_EXTRA_HARDWAREFILTER_MASKS = "hardwareFilterMasks";
 
+    // Extra: "canNumber" (2 == CAN1, 3 == CAN2)int value to indicate which CAN channel we are opening.
+    //      use with START, RESTART and STOP actions
+    public static final String SERVICE_EXTRA_CAN_NUMBER = "canNumber";
+
 
 
     //////////////////////////////////////
