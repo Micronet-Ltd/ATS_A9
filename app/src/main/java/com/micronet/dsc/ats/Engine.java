@@ -37,12 +37,16 @@ public class Engine {
     String last_device_serial;
 
     J1939 j1939; // a SAE J1939 bus connection
+    J1939 j1939_can2;
     J1587 j1587; // a SAE J1587 bus connection
 
 
     public static final int BUS_TYPE_NONE = 0; // the default
     public static final int BUS_TYPE_J1939_250K = 1;
     public static final int BUS_TYPE_J1939_500K = 2;
+    //Todo: Adding new BUS_TYPE_J1939_CAN_2_250K & BUS_TYPE_J1939_CAN_2_500K ?(DONE)
+    public static final int BUS_TYPE_J1939_CAN2_250K = 5;
+    public static final int BUS_TYPE_J1939_CAN2_500K = 6;
 
     public static final int BUS_TYPE_J1939 = BUS_TYPE_J1939_250K; // for generic J1939, use the same ID as 250
     public static final int BUS_TYPE_J1587 = 4;
@@ -53,8 +57,12 @@ public class Engine {
             "J1939-250",
             "J1939-500",
             "N/A",
-            "J1587"
+            "J1587",
+            "J1939-CAN2-250",
+            "J1939-CAN2-500"
+            //Todo: Adding J1939 Can 2 250/500 in this list(DONE)
     };
+
     public String getBusName(int bus_type) {
         if (bus_type >= BUS_NAMES.length) return "UNK";
         return BUS_NAMES[bus_type];
@@ -196,8 +204,9 @@ public class Engine {
 
         // set initial values for isEnabled, which determines whether local broadcasts get sent for vehicle status
         boolean j1939_enabled = getConfigJ1939Enabled();
+        boolean j1939_can2_enabled = getConfigJ1939Can2Enabled();
         boolean j1587_enabled = getConfigJ1587Enabled();
-        if ((j1939_enabled) || (j1587_enabled)) {
+        if ((j1939_enabled) || (j1587_enabled) || (j1939_can2_enabled)) {
             isEnabled = true;
         } else {
             isEnabled = false;
@@ -304,13 +313,22 @@ public class Engine {
     } // setWarmStart()
 
 
-    boolean getConfigJ1939Enabled() {
+    boolean getConfigJ1939Enabled() { // Todo: Needed a new method getCan2Enabled()
         String j1939_config = service.config.readParameterString(Config.SETTING_VEHICLECOMMUNICATION, Config.PARAMETER_VEHICLECOMMUNICATION_J1939_SPEED_KBS );
         boolean j1939_enabled = false;
         if (!j1939_config.toUpperCase().equals("OFF")) {
             j1939_enabled = true;
         }
         return j1939_enabled;
+    }
+
+    boolean getConfigJ1939Can2Enabled(){
+        String j1939_can2_config = service.config.readParameterString(Config.SETTING_VEHICLECOMMUNICATION, Config.PARAMETER_VEHICLECOMMUNICATION_J1939_CAN2_SPEED_KBS);
+        boolean j1939_can2_enabled = false;
+        if(!j1939_can2_config.toUpperCase().equals("OFF")){
+            j1939_can2_enabled = true;
+        }
+        return j1939_can2_enabled;
     }
 
     boolean getConfigJ1587Enabled() {
@@ -334,10 +352,11 @@ public class Engine {
 
         boolean j1939_enabled = getConfigJ1939Enabled();
         boolean j1587_enabled = getConfigJ1587Enabled();
+        boolean j1939_can2_enabled = getConfigJ1939Can2Enabled();
 
 
 
-        if ((!j1939_enabled) && (!j1587_enabled)) {
+        if ((!j1939_enabled) && (!j1587_enabled) && (!j1939_can2_enabled)) {
             Log.v(TAG, "All buses disabled in config");
             isEnabled = false;
 
@@ -360,7 +379,7 @@ public class Engine {
 
 
         Log.v(TAG, "start(" + device_serial + ") " + (warmStart ? "(warm)" :  "(cold)") + " for" +
-                        (j1939_enabled ? " J1939": "") + (j1587_enabled ? " J1587": "")
+                        (j1939_enabled ? " J1939 CAN1": "") + (j1939_can2_enabled ? "J1939 CAN2":"")+(j1587_enabled ? " J1587": "")
         );
 
         last_device_serial = device_serial; // used if this needs to be restarted
@@ -394,7 +413,7 @@ public class Engine {
 
         try {
             IntentFilter intentFilter = new IntentFilter();
-            intentFilter.addAction(VehicleBusConstants.BROADCAST_STATUS);
+            intentFilter.addAction(VehicleBusConstants.BROADCAST_STATUS); // Todo: Marked! Need to look into this!
             service.context.registerReceiver(busStatusReceiver, intentFilter, VehicleBusConstants.PERMISSION_VBS_TXRX, null);
         } catch (Exception e) {
             Log.e(TAG, "Could not register busStatus receiver");
@@ -640,6 +659,7 @@ public class Engine {
     //  when we go to set a piece of data
     // Returns true if the "new" bus type has priority over the "old" bus type
     ////////////////////////////////////////////////////////////////
+    //Todo: Do we need to also include J1939_CAN2 into the high priority list
     static boolean hasBusPriority(int new_bus_type, int old_bus_type) {
 
         if (new_bus_type == BUS_TYPE_J1939) return true;
@@ -1094,7 +1114,7 @@ public class Engine {
                     RawForwardRequest rfr = new RawForwardRequest();
                     rfr.bus_type = BUS_TYPE_NONE;
 
-                    if (rbus.equals("J1939")) {
+                    if (rbus.equals("J1939")) { // Todo: Do we need to add can2 here !? Check the following rawMethods(), seems like something is going on here....
                         rfr.bus_type = Engine.BUS_TYPE_J1939;
                     } else if (rbus.equals("J1587")) {
                         rfr.bus_type = Engine.BUS_TYPE_J1587;
@@ -1327,6 +1347,8 @@ public class Engine {
                 (!isBusServiceRunning() ? "VBS=Off" :
                     ((status.buses_detected & BUS_TYPE_J1939_250K) > 0 ? " J1939-250=" + ((status.buses_communicating & BUS_TYPE_J1939_250K) > 0 ? "UP" : "--") : "")+
                     ((status.buses_detected & BUS_TYPE_J1939_500K) > 0 ? " J1939-500=" + ((status.buses_communicating & BUS_TYPE_J1939_500K) > 0 ? "UP" : "--") : "") +
+                            ((status.buses_detected & BUS_TYPE_J1939_CAN2_250K) > 0 ? "J1939-CAN2-250=" + ((status.buses_communicating & BUS_TYPE_J1939_CAN2_250K) > 0 ? "UP" : "--") : "")+
+                            ((status.buses_detected & BUS_TYPE_J1939_CAN2_500K) > 0 ? " J1939-CAN2-500=" + ((status.buses_communicating & BUS_TYPE_J1939_CAN2_500K) > 0 ? "UP" : "--") : "")+
                     ((status.buses_detected & BUS_TYPE_J1587) > 0 ? " J1587=" + ((status.buses_communicating & BUS_TYPE_J1587) > 0 ? "UP" : "--")  : "")
                 ) +
                 " : " +

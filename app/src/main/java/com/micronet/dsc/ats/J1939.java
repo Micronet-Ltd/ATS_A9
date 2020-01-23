@@ -402,23 +402,34 @@ public class J1939 extends EngineBus {
         int bus_speed_kbs = 0;
         String bus_speed_str = engine.service.config.readParameterString(Config.SETTING_VEHICLECOMMUNICATION, Config.PARAMETER_VEHICLECOMMUNICATION_J1939_SPEED_KBS);
 
+        int bus_can2_speed_kbs = 0;
+        String bus_can2_speed_str = engine.service.config.readParameterString(Config.SETTING_VEHICLECOMMUNICATION, Config.PARAMETER_VEHICLECOMMUNICATION_J1939_CAN2_SPEED_KBS);
+
         if (!bus_speed_str.toUpperCase().equals("AUTO")) {
             bus_speed_kbs = engine.service.config.readParameterInt(Config.SETTING_VEHICLECOMMUNICATION, Config.PARAMETER_VEHICLECOMMUNICATION_J1939_SPEED_KBS);
         }
 
+        if(!bus_can2_speed_str.toUpperCase().equals("AUTO")){
+            bus_can2_speed_kbs = engine.service.config.readParameterInt(Config.SETTING_VEHICLECOMMUNICATION, Config.PARAMETER_VEHICLECOMMUNICATION_J1939_CAN2_SPEED_KBS);
+        }
+
         boolean auto_detect = true; // auto-detect the bitrate
 
-        if (bus_speed_kbs != 0) { // we hard-configured a bus speed
+        if ((bus_speed_kbs != 0) || (bus_can2_speed_kbs != 0)) { // we hard-configured a bus speed
             auto_detect = false; // no need to auto-detect,  just check & use this configured speed
 
             // force the bus speed
-            if (bus_speed_kbs == 500) {
-                last_known_bus_type = Engine.BUS_TYPE_J1939_500K;
-            } else {
-                last_known_bus_type = Engine.BUS_TYPE_J1939_250K;
-            }
+                if (bus_speed_kbs == 500) {
+                    //Todo: Something is happening here, there should be an implamentation for CAN2(Maybe declare new value to store the current CanNumber, like bus_speed_kbs)
+                    last_known_bus_type = Engine.BUS_TYPE_J1939_500K;
+                } else if(bus_speed_kbs == 250) {
+                    last_known_bus_type = Engine.BUS_TYPE_J1939_250K;
+                } else if(bus_can2_speed_kbs == 500){
+                    last_known_bus_type = Engine.BUS_TYPE_J1939_CAN2_500K;
+                }else if(bus_can2_speed_kbs == 250){
+                    last_known_bus_type = Engine.BUS_TYPE_J1939_CAN2_250K;
+                }
         }
-
 
         if (busTypeVerified) auto_detect = false; // no reason to auto-detect if we already know the answer.
 
@@ -787,12 +798,14 @@ public class J1939 extends EngineBus {
     void discoverBus(int bus_type, boolean verified, boolean auto_detect) {
 
         int bitrate = busTypeToSpeed(bus_type);
-
+        //Todo: need to add canNumber in here, find way to get the value from configuration.
         //Log.v(TAG, "discoverBus starting @ " + bitrate + "kb " + (verified ? "pre-verified " : "unverified ") + (auto_detect ? "auto-detect" : ""));
 
         // clear the J1939 bus types in the engine communication bitfield, we will mark the correct one below
         engine.clearBusDetected(Engine.BUS_TYPE_J1939_500K);
-        engine.clearBusDetected(Engine.BUS_TYPE_J1939_250K);
+        engine.clearBusDetected(Engine.BUS_TYPE_J1939_250K); // Todo: clear the bitfield for can 2 as well.
+        engine.clearBusDetected(Engine.BUS_TYPE_J1939_CAN2_250K);
+        engine.clearBusDetected(Engine.BUS_TYPE_J1939_CAN2_500K);
 
         if (bitrate != 0) {
             startCanBus(bitrate, verified, auto_detect, canFilterIds, canFilterMasks);
@@ -2207,7 +2220,7 @@ public class J1939 extends EngineBus {
     }
 
 
-    void startCanBus(int bitrate, boolean skipVerify, boolean autoDetect, int[] ids, int[] masks) {
+    void startCanBus(int bitrate, boolean skipVerify, boolean autoDetect, int[] ids, int[] masks) { // Todo: Add canNumber in here, and have it putExtra! Watch out the ordering of the parameters!
         Log.v(TAG, "Starting Vbus/CAN Service " + bitrate +"kb " + (skipVerify ? "verify-off " : "verify-on ") + (autoDetect ? "auto-on" : "auto-off"));
         //Log.v(TAG, "Filter[0] " + String.format("%X", ids[0]) + " " + String.format("%X", masks[0]));
 
@@ -2235,6 +2248,8 @@ public class J1939 extends EngineBus {
         serviceIntent.putExtra(VehicleBusConstants.SERVICE_EXTRA_AUTODETECT, autoDetect);
         serviceIntent.putExtra(VehicleBusConstants.SERVICE_EXTRA_HARDWAREFILTER_IDS, ids);
         serviceIntent.putExtra(VehicleBusConstants.SERVICE_EXTRA_HARDWAREFILTER_MASKS, masks);
+
+
 
         engine.service.context.startForegroundService(serviceIntent);
 

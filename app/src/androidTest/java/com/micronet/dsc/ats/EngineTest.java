@@ -25,6 +25,7 @@ public class EngineTest {
     private static Engine engine;
     private static Config config;
     private static State state;
+    private static final String TAG = "engine-test";
 
     @BeforeClass
     public static void setUp() {
@@ -66,11 +67,19 @@ public class EngineTest {
     public void testHasBusPriority() {
         // priority is simple, just J1939 bus has higher priority than J1587 has higher priority than none.
 
+        String testingCan2_250 = engine.getBusName(5);
+        String testingCan2_500 = engine.getBusName(6);
+
+        assertEquals("J1939-CAN2-250", testingCan2_250);
+        assertEquals("J1939-CAN2-500", testingCan2_500);
+
         assertTrue(Engine.hasBusPriority(Engine.BUS_TYPE_J1939, Engine.BUS_TYPE_NONE));
         assertTrue(Engine.hasBusPriority(Engine.BUS_TYPE_J1587, Engine.BUS_TYPE_NONE));
         assertTrue(Engine.hasBusPriority(Engine.BUS_TYPE_J1939, Engine.BUS_TYPE_J1587));
         assertTrue(Engine.hasBusPriority(Engine.BUS_TYPE_J1939, Engine.BUS_TYPE_J1939));
         assertTrue(Engine.hasBusPriority(Engine.BUS_TYPE_J1587, Engine.BUS_TYPE_J1587));
+        assertTrue(Engine.hasBusPriority(Engine.BUS_TYPE_J1939_CAN2_250K, Engine.BUS_TYPE_J1587));
+        assertTrue(Engine.hasBusPriority(Engine.BUS_TYPE_J1939_CAN2_500K, Engine.BUS_TYPE_NONE));
 
         assertFalse(Engine.hasBusPriority(Engine.BUS_TYPE_J1587, Engine.BUS_TYPE_J1939));
     } // test_hasBusPriority()

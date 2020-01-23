@@ -68,6 +68,7 @@ public final class VehicleBusConstants {
     public static final String SERVICE_EXTRA_HARDWAREFILTER_MASKS = "hardwareFilterMasks";
 
 
+
     //////////////////////////////////////
     // Broadcasts To or From the VBS Service
     //////////////////////////////////////
