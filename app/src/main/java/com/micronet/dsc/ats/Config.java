@@ -13,6 +13,8 @@ package com.micronet.dsc.ats;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -140,7 +142,12 @@ public class Config {
         public static final int PARAMETER_VEHICLECOMMUNICATION_J1939_SPEED_KBS = 0;
         public static final int PARAMETER_VEHICLECOMMUNICATION_J1708_ENABLED = 1;
     public static final int SETTING_INPUT_GP7 = 36;
-
+    //Todo: Added new setting and parameter id for GSD service;
+    public static final int SETTING_GSD_SETTING = 37;
+    public static final int PARAMETER_GSD_ACTIVE = 0;
+    public static final int PARAMETER_GSD_PIN_CODE = 1;
+    public static final int PARAMETER_GSD_FORCE_SYNC = 2;
+    public static final int PARAMETER_GSD_SYNC_INTERVAL = 3;
 
 
 
@@ -184,7 +191,9 @@ public class Config {
             "3|1", // parking brake messages: All messages On, in case of conflicting data treat it as On
             "1", // fault code messages
             "Off|Off", // J1939 speed+enable, J1708 enabled
-            "1|20|40|1800|1|0" // Input 7: bias, 1/10s debounce-on, 1/10s delay, 1/10s keep-alive, bf messages, 1/10s debounce-off (0 = same as on)
+            "1|20|40|1800|1|0", // Input 7: bias, 1/10s debounce-on, 1/10s delay, 1/10s keep-alive, bf messages, 1/10s debounce-off (0 = same as on)
+            //Todo: Added new default value for GSD service
+            "Off|0|Off|0"
     };
 
 
@@ -215,7 +224,6 @@ public class Config {
     Context context;
     public Config(Context c) {
         context = c;
-
     }
 
 

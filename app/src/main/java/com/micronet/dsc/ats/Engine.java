@@ -14,6 +14,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
@@ -322,7 +324,19 @@ public class Engine {
         return j1587_enabled;
     }
 
-
+    public boolean isNewCTVersion(){
+        boolean newVersion = false;
+        try {
+            PackageManager pm = service.getPackageManager();
+            PackageInfo pInfo = pm.getPackageInfo("com.communitake.mdc.micronet", 0);
+            String version = pInfo.versionName;
+            Log.d(TAG, "GSD Version Name: " + version);
+            return newVersion;
+        }catch(PackageManager.NameNotFoundException e){
+            Log.d(TAG, "Not able to get app version: " + e);
+        }
+        return newVersion;
+    }
     ////////////////////////////////////////////////////////////////////
     // start()
     //      "Start" the Engine monitoring, called when ignition is turned on, or app started with ignition on
@@ -335,7 +349,7 @@ public class Engine {
         boolean j1939_enabled = getConfigJ1939Enabled();
         boolean j1587_enabled = getConfigJ1587Enabled();
 
-
+        //isNewCTVersion(); // Todo: isNewCTVersion() is here;
 
         if ((!j1939_enabled) && (!j1587_enabled)) {
             Log.v(TAG, "All buses disabled in config");

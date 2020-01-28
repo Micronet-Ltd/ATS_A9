@@ -276,6 +276,7 @@ public class Io {
             ignitionWakeLock = service.power.changeWakeLock(WAKELOCK_IGNITION_NAME, ignitionWakeLock, 0);
             service.position.start();
             service.engine.start(deviceConstants.deviceId);
+            //service.gsdService.start();
 
             // check if we are waiting to send the engine on message
             if ((status.flagEngineStatus) && (status.flagWaitEngineOnMessage)) {
@@ -666,6 +667,7 @@ public class Io {
                     // Start the location information
                     service.position.start();
                     service.engine.start(deviceConstants.deviceId); // start engine monitoring
+                    //service.gsdService.start();
 
                 } // ignition was off
 

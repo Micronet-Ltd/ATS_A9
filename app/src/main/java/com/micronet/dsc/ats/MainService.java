@@ -101,6 +101,7 @@ public class MainService extends Service {
     Position position;
     Engine engine;
     LocalMessage local;
+    GSDService gsdService;
 
     static boolean isUnitTesting = false; // this is set when we unit test to deal with threading, etc..
     static MainService initializedServiceInstance = null; // keep track of the last initialized service instance
@@ -166,7 +167,8 @@ public class MainService extends Service {
 
         engine = new Engine(this);
 
-
+        gsdService = new GSDService(this);
+        gsdService.start();
 
         // After this point we can add events to the queue
         initializedServiceInstance = this;
