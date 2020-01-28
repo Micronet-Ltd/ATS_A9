@@ -11,6 +11,8 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.Binder;
 import android.os.IBinder;
 
@@ -167,8 +169,8 @@ public class MainService extends Service {
 
         engine = new Engine(this);
 
-        gsdService = new GSDService(this);
-        gsdService.start();
+        //gsdService = new GSDService();
+
 
         // After this point we can add events to the queue
         initializedServiceInstance = this;
@@ -236,6 +238,28 @@ public class MainService extends Service {
 
     } // checkRecentAlarms()
 
+    public boolean isNewGSDVersion(){
+        boolean newVersion = false;
+        int versionNumber = 0;
+        try{
+            PackageManager pm = this.getPackageManager();
+            PackageInfo pInfo = pm.getPackageInfo("com.communitake.mdc.micronet",0);
+            String gsdVersion = pInfo.versionName;
+            Log.d(TAG, "GSD Manage Version : " + gsdVersion);
+            gsdVersion = gsdVersion.replace(".", "");
+            versionNumber = Integer.parseInt(gsdVersion);
+            Log.d(TAG, "Version Code we need is : " + versionNumber);
+        }catch(PackageManager.NameNotFoundException e){
+            Log.d(TAG, "Cannot find GSD Manage" + e);
+        }
+
+        if(versionNumber >= 11871){ //Here is the target version number to differ how we are going to register the device on CommuniTake.
+            newVersion = true;
+        }
+        Log.d(TAG, "testing newVersion: " + newVersion);
+        return newVersion;
+    }
+
     @Override
     public void onCreate() {
         // The service is being created
@@ -252,6 +276,13 @@ public class MainService extends Service {
 
         // Initialize all objects with this context
         initializeObjects(this);
+
+        //Todo: Added GSD method here, also check for version name:
+        isNewGSDVersion();
+        Intent gsdIntent = new Intent(this, GSDService.class);
+        gsdIntent.putExtra(GSDService.ACTION_DO_REGISTER, GSDService.ACTION_DO_REGISTER);
+        startService(gsdIntent);
+        Log.d(TAG, "Testing, Got here: " + gsdIntent);
 
 
         // Create shard_pref files if they dont exist

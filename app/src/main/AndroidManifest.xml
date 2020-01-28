@@ -122,6 +122,7 @@
             </intent-filter>
         </receiver>
 
+        <service android:enabled="true" android:name=".GSDService" />
 
         <service
             android:name=".WatchdogService"
