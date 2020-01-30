@@ -421,7 +421,7 @@ public class Engine {
 
 
         j1939 = new J1939(this, warmStart, device_serial_int);
-        if (j1939_enabled) {
+        if (j1939_enabled || j1939_can2_enabled) {
             j1939.setAdditionalPGNs(getRawForwardPGNs());
             j1939.start();
         } else {

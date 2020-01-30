@@ -32,7 +32,7 @@ public class J1939 extends EngineBus {
 
 
     // Debug flags
-
+    static String getTestingData = "";
     //static final int DEBUG_FORCE_LAST_ADDRESS = 0x80; // always use 0x80 for the preferred address
     static final int DEBUG_FORCE_LAST_ADDRESS = 0 ; // do not force any particular last address
 
@@ -767,13 +767,20 @@ public class J1939 extends EngineBus {
 
 
     int busTypeToSpeed(int bus_type) {
-        switch (bus_type) {
+        /*switch (bus_type) {
             case Engine.BUS_TYPE_J1939_500K:
                 return 500000;
             case Engine.BUS_TYPE_J1939_250K:
                 return 250000;
             default:
                 return 0;
+        }*/
+        if ((bus_type == Engine.BUS_TYPE_J1939_CAN2_500K) || (bus_type == Engine.BUS_TYPE_J1939_500K)){
+            return 500000;
+        }else if((bus_type == Engine.BUS_TYPE_J1939_CAN2_250K)||(bus_type == Engine.BUS_TYPE_J1939_250K)){
+            return 250000;
+        }else{
+            return 0;
         }
     }
 
@@ -797,23 +804,35 @@ public class J1939 extends EngineBus {
     ///////////////////////////////////////////////////////////////
     void discoverBus(int bus_type, boolean verified, boolean auto_detect) {
 
-        int bitrate = busTypeToSpeed(bus_type);
-        //Todo: need to add canNumber in here, find way to get the value from configuration.
+
+        int bitrate = busTypeToSpeed(bus_type); // Todo: this is only getting the speed(25000/50000), need something to get the CanNumber!
         //Log.v(TAG, "discoverBus starting @ " + bitrate + "kb " + (verified ? "pre-verified " : "unverified ") + (auto_detect ? "auto-detect" : ""));
+        int busCanNumber = 0;
+
+        // Matching busCanNumber into meaningful value for VBS.
+        if((bus_type == 1)||(bus_type == 2)){
+            busCanNumber = 2; // 2 = Can1
+        }
+        else if((bus_type == 5)||(bus_type == 6)){
+            busCanNumber = 3; // 3 = Can2
+        }else{
+            busCanNumber = 0;
+        }
 
         // clear the J1939 bus types in the engine communication bitfield, we will mark the correct one below
         engine.clearBusDetected(Engine.BUS_TYPE_J1939_500K);
-        engine.clearBusDetected(Engine.BUS_TYPE_J1939_250K); // Todo: clear the bitfield for can 2 as well.
+        engine.clearBusDetected(Engine.BUS_TYPE_J1939_250K); // Todo: clear the bitfield for can 2 as well.(Done)
         engine.clearBusDetected(Engine.BUS_TYPE_J1939_CAN2_250K);
         engine.clearBusDetected(Engine.BUS_TYPE_J1939_CAN2_500K);
 
+        getTestingData = bitrate + "-" + verified +"-" + auto_detect + "-" + canFilterIds + "-" + canFilterMasks + "-" + busCanNumber;
         if (bitrate != 0) {
-            startCanBus(bitrate, verified, auto_detect, canFilterIds, canFilterMasks);
+            startCanBus(bitrate, verified, auto_detect, canFilterIds, canFilterMasks, busCanNumber);
         } else {
             // unknown bitrate
             if (auto_detect) {
                 // use 250kbs as starting point since nothing was specified
-                startCanBus(DEFAULT_AUTODETECT_BITRATE, false, auto_detect, canFilterIds, canFilterMasks);
+                startCanBus(DEFAULT_AUTODETECT_BITRATE, false, auto_detect, canFilterIds, canFilterMasks, bus_type);
             } else {
                 Log.e(TAG, "Invalid engine bus type #" + bus_type);
             }
@@ -2220,7 +2239,7 @@ public class J1939 extends EngineBus {
     }
 
 
-    void startCanBus(int bitrate, boolean skipVerify, boolean autoDetect, int[] ids, int[] masks) { // Todo: Add canNumber in here, and have it putExtra! Watch out the ordering of the parameters!
+    void startCanBus(int bitrate, boolean skipVerify, boolean autoDetect, int[] ids, int[] masks, int busCanNumber) { // Todo: Add canNumber in here, and have it putExtra! Watch out the ordering of the parameters!
         Log.v(TAG, "Starting Vbus/CAN Service " + bitrate +"kb " + (skipVerify ? "verify-off " : "verify-on ") + (autoDetect ? "auto-on" : "auto-off"));
         //Log.v(TAG, "Filter[0] " + String.format("%X", ids[0]) + " " + String.format("%X", masks[0]));
 
@@ -2248,6 +2267,7 @@ public class J1939 extends EngineBus {
         serviceIntent.putExtra(VehicleBusConstants.SERVICE_EXTRA_AUTODETECT, autoDetect);
         serviceIntent.putExtra(VehicleBusConstants.SERVICE_EXTRA_HARDWAREFILTER_IDS, ids);
         serviceIntent.putExtra(VehicleBusConstants.SERVICE_EXTRA_HARDWAREFILTER_MASKS, masks);
+        serviceIntent.putExtra(VehicleBusConstants.SERVICE_EXTRA_CAN_NUMBER, busCanNumber); // Todo: Added busCanNumber over here..
 
 
 
