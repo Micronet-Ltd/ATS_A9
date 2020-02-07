@@ -140,6 +140,11 @@ public class Config {
         public static final int PARAMETER_VEHICLECOMMUNICATION_J1939_SPEED_KBS = 0;
         public static final int PARAMETER_VEHICLECOMMUNICATION_J1708_ENABLED = 1;
     public static final int SETTING_INPUT_GP7 = 36;
+    public static final int SETTING_RESET_RB = 37; // Todo: this is the reset_rb
+    public static final int SETTING_AOLLOW_RESET = 0;
+    public static final int SETTING_RESET_PERIOD = 1;
+    public static final int SETTING_RESET_FORCE_SYNE = 2;
+
 
 
 
@@ -184,7 +189,8 @@ public class Config {
             "3|1", // parking brake messages: All messages On, in case of conflicting data treat it as On
             "1", // fault code messages
             "Off|Off", // J1939 speed+enable, J1708 enabled
-            "1|20|40|1800|1|0" // Input 7: bias, 1/10s debounce-on, 1/10s delay, 1/10s keep-alive, bf messages, 1/10s debounce-off (0 = same as on)
+            "1|20|40|1800|1|0", // Input 7: bias, 1/10s debounce-on, 1/10s delay, 1/10s keep-alive, bf messages, 1/10s debounce-off (0 = same as on)
+            "Off|1|Off" // Reset_RB: Allow = Off| period = 1| Force-sync = Off.
     };
 
 
@@ -298,7 +304,7 @@ public class Config {
     //  returns : true if it was written, false if it was not
     ///////////////////////////////////////////////////
     public boolean writeSetting(int setting_id, String new_value) {
-
+        // Todo: Since REST_RB is declared. We need to also work on saving the last_clear_time to compare the time difference. When system starts up, it should check
         if (!settingExists(setting_id)) return false;
 
         SharedPreferences.Editor editor = sharedPref.edit();
