@@ -71,7 +71,9 @@ public final class VehicleBusConstants {
     //      use with START, RESTART and STOP actions
     public static final String SERVICE_EXTRA_CAN_NUMBER = "canNumber";
 
-
+    //  Extra: "flowControl" (boolean). Defines whether flow control should be used from /sdcard/VBS/config.xml.
+    //      use with START action only
+    public static final String SERVICE_EXTRA_FLOW_CONTROL = "flowControl";
 
     //////////////////////////////////////
     // Broadcasts To or From the VBS Service
@@ -102,6 +104,8 @@ public final class VehicleBusConstants {
     public static final String BROADCAST_EXTRA_STATUS_CANTX = "cantx";
     // Extra "canBitrate" (int): what is the can bitrate ? Useful after auto-detection
     public static final String BROADCAST_EXTRA_STATUS_CANBITRATE ="canBitrate";
+    // Extra "canNumber" (int): what is the can number?
+    public static final String BROADCAST_EXTRA_STATUS_CANNUMBER ="canNumber";
     // Extra "j1708rx" (boolean): are we able to receive on J1708 yet?
     public static final String BROADCAST_EXTRA_STATUS_J1708RX ="j1708rx";
     // Extra "j1708tx" (boolean): are we able to transmit on J1708 yet?

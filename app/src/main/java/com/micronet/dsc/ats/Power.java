@@ -1100,6 +1100,7 @@ public class Power {
                             (!isScreenOn())) { // or if screen is off
                         // then we can power down when there are no wakelocks and the device is not undocked
                         if (!isWakeLockHeld()) {
+                            Log.e(TAG, "About to power down.");
                             powerDown();
                         }
                     } // screen is appropriate

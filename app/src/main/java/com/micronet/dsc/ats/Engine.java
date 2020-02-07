@@ -21,6 +21,7 @@ import android.os.SystemClock;
 
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
@@ -44,12 +45,10 @@ public class Engine {
     public static final int BUS_TYPE_NONE = 0; // the default
     public static final int BUS_TYPE_J1939_250K = 1;
     public static final int BUS_TYPE_J1939_500K = 2;
-    //Todo: Adding new BUS_TYPE_J1939_CAN_2_250K & BUS_TYPE_J1939_CAN_2_500K ?(DONE)
-    public static final int BUS_TYPE_J1939_CAN2_250K = 5;
-    public static final int BUS_TYPE_J1939_CAN2_500K = 6;
-
     public static final int BUS_TYPE_J1939 = BUS_TYPE_J1939_250K; // for generic J1939, use the same ID as 250
     public static final int BUS_TYPE_J1587 = 4;
+    public static final int BUS_TYPE_J1939_CAN2_250K = 8;
+    public static final int BUS_TYPE_J1939_CAN2_500K = 16;
 
     // make sure there is a name for each bus
     public static final String[] BUS_NAMES = new String[] {
@@ -58,9 +57,18 @@ public class Engine {
             "J1939-500",
             "N/A",
             "J1587",
+            "N/A",
+            "N/A",
+            "N/A",
             "J1939-CAN2-250",
+            "N/A",
+            "N/A",
+            "N/A",
+            "N/A",
+            "N/A",
+            "N/A",
+            "N/A",
             "J1939-CAN2-500"
-            //Todo: Adding J1939 Can 2 250/500 in this list(DONE)
     };
 
     public String getBusName(int bus_type) {
@@ -348,12 +356,12 @@ public class Engine {
     //  serial: a device serial number to incorporate into any node names (like J1939)
     ////////////////////////////////////////////////////////////////////
     public void start(String device_serial) {
-
+        // Restart start attempts count.
+        vbsRestartAttempts = 0;
 
         boolean j1939_enabled = getConfigJ1939Enabled();
         boolean j1587_enabled = getConfigJ1587Enabled();
         boolean j1939_can2_enabled = getConfigJ1939Can2Enabled();
-
 
 
         if ((!j1939_enabled) && (!j1587_enabled) && (!j1939_can2_enabled)) {
@@ -1345,10 +1353,10 @@ public class Engine {
 
         Log.d(TAG,
                 (!isBusServiceRunning() ? "VBS=Off" :
-                    ((status.buses_detected & BUS_TYPE_J1939_250K) > 0 ? " J1939-250=" + ((status.buses_communicating & BUS_TYPE_J1939_250K) > 0 ? "UP" : "--") : "")+
-                    ((status.buses_detected & BUS_TYPE_J1939_500K) > 0 ? " J1939-500=" + ((status.buses_communicating & BUS_TYPE_J1939_500K) > 0 ? "UP" : "--") : "") +
-                            ((status.buses_detected & BUS_TYPE_J1939_CAN2_250K) > 0 ? "J1939-CAN2-250=" + ((status.buses_communicating & BUS_TYPE_J1939_CAN2_250K) > 0 ? "UP" : "--") : "")+
-                            ((status.buses_detected & BUS_TYPE_J1939_CAN2_500K) > 0 ? " J1939-CAN2-500=" + ((status.buses_communicating & BUS_TYPE_J1939_CAN2_500K) > 0 ? "UP" : "--") : "")+
+                    ((status.buses_detected & BUS_TYPE_J1939_250K) == BUS_TYPE_J1939_250K ? " J1939-250=" + ((status.buses_communicating & BUS_TYPE_J1939_250K) == BUS_TYPE_J1939_250K ? "UP" : "--") : "")+
+                    ((status.buses_detected & BUS_TYPE_J1939_500K) == BUS_TYPE_J1939_500K ? " J1939-500=" + ((status.buses_communicating & BUS_TYPE_J1939_500K) == BUS_TYPE_J1939_500K ? "UP" : "--") : "") +
+                            ((status.buses_detected & BUS_TYPE_J1939_CAN2_250K) == BUS_TYPE_J1939_CAN2_250K ? " J1939-CAN2-250=" + ((status.buses_communicating & BUS_TYPE_J1939_CAN2_250K) == BUS_TYPE_J1939_CAN2_250K ? "UP" : "--") : "")+
+                            ((status.buses_detected & BUS_TYPE_J1939_CAN2_500K) == BUS_TYPE_J1939_CAN2_500K ? " J1939-CAN2-500=" + ((status.buses_communicating & BUS_TYPE_J1939_CAN2_500K) == BUS_TYPE_J1939_CAN2_500K ? "UP" : "--") : "")+
                     ((status.buses_detected & BUS_TYPE_J1587) > 0 ? " J1587=" + ((status.buses_communicating & BUS_TYPE_J1587) > 0 ? "UP" : "--")  : "")
                 ) +
                 " : " +
@@ -1425,9 +1433,10 @@ public class Engine {
 
 
 
-    // the bus status should be broadcast by VBus every second. If we go 6 seconds without it, then something is wrong.
-    static final int MAX_BUSSTATUS_RECEIPT_MS = 6000; // 6 seconds
-
+    // the bus status should be broadcast by VBus every second. If we go 10 seconds without it, then something is wrong.
+    static final int MAX_BUSSTATUS_RECEIPT_MS = 10000; // 10 seconds
+    static final int MAX_RESTART_ATTEMPTS = 2;
+    static int vbsRestartAttempts = 0;
 
     synchronized boolean isBusServiceRunning() {
         long nowElapsedTime = SystemClock.elapsedRealtime();
@@ -1447,14 +1456,24 @@ public class Engine {
     void verifyBusService() {
 
         if (!isBusServiceRunning()) {
+
             if (busStatusReceiver.isAlive) {
                 Log.e(TAG, "VBS Service is not running!");
                 busStatusReceiver.isAlive = false;
                 service.addEventWithExtra(EventType.EVENT_TYPE_ERROR, EventType.ERROR_VBS_SERVICE_JAMMED);
             }
+
+            if (vbsRestartAttempts >= MAX_RESTART_ATTEMPTS) {
+                // Stop trying to start VBS because there is an issue.
+                Log.e(TAG, "VBS isn't running correctly. Stopping until next engine start or reboot.");
+                stop();
+                return;
+            }
+
             // Try to restart it
             restartBusService();
             initBusService(); // re-start the timers so we give it time to start
+            vbsRestartAttempts++;
         }
     } // verifyBusService()
 
@@ -1512,7 +1531,8 @@ public class Engine {
 
                     if (j1939 != null) {
                         int canBitrate = intent.getIntExtra(VehicleBusConstants.BROADCAST_EXTRA_STATUS_CANBITRATE, 0);
-                        j1939.busReadyTxCallback(canBitrate); // start transmitting J1939
+                        int canNumber = intent.getIntExtra(VehicleBusConstants.BROADCAST_EXTRA_STATUS_CANNUMBER, 0);
+                        j1939.busReadyTxCallback(canBitrate, canNumber); // start transmitting J1939
                     }
                 }
 

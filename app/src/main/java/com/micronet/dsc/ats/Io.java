@@ -24,6 +24,7 @@ import android.os.SystemClock;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static android.content.Intent.EXTRA_DOCK_STATE;
 import static android.content.Intent.EXTRA_DOCK_STATE_CAR;
 import static android.content.Intent.EXTRA_DOCK_STATE_DESK;
 import static android.content.Intent.EXTRA_DOCK_STATE_HE_DESK;
@@ -236,10 +237,31 @@ public class Io {
             // Set default dock state to 0, because if we are docked then we will receive the actual dock state
             service.state.writeState(State.DOCK_STATE, 0);
 
-			// register the dock state receiver
-			IntentFilter intentFilterDockState =  new IntentFilter();
-			intentFilterDockState.addAction(Intent.ACTION_DOCK_EVENT);
-			service.context.registerReceiver(dockStateReceiver, intentFilterDockState);
+			// Update initial value of dock state
+            IntentFilter ifilter = new IntentFilter(Intent.ACTION_DOCK_EVENT);
+            Intent dockStatus = service.context.registerReceiver(null, ifilter);
+            if (dockStatus != null) {
+                int dockState = dockStatus.getIntExtra(EXTRA_DOCK_STATE, 0);
+                temporaryDockState.set(dockState);
+            } else {
+                temporaryDockState.set(0);
+            }
+
+
+            // Handle if initial state is undocked because on Tab8 no broadcast will be received on boot.
+            if (temporaryDockState.get() == EXTRA_DOCK_STATE_UNDOCKED) {
+                Log.d(TAG, "Device is undocked.");
+
+                // Remove any previous callbacks (for ex. if we are receiving 3-4 dock events for 1 event)
+                dockStateHandler.removeCallbacks(handleDockStateRunnable);
+                // Handle dock state in five seconds
+                dockStateHandler.postDelayed(handleDockStateRunnable, DOCK_STATE_DELAY);
+            }
+
+            // register the dock state receiver
+            IntentFilter intentFilterDockState =  new IntentFilter();
+            intentFilterDockState.addAction(Intent.ACTION_DOCK_EVENT);
+            service.context.registerReceiver(dockStateReceiver, intentFilterDockState);
         }
 
         // start the IO Service
@@ -1271,6 +1293,7 @@ public class Io {
     //   Receives the dock state and any changes to dock state
     //////////////////////////////////////////////////////////
     private AtomicInteger temporaryDockState = new AtomicInteger(-1);
+    private boolean firstRun = true;
     private Handler dockStateHandler = new Handler();
     private DockStateReceiver dockStateReceiver = new DockStateReceiver();
     private final int DOCK_STATE_DELAY = 5000;
@@ -1279,8 +1302,8 @@ public class Io {
         @Override
         public void onReceive(Context context, Intent intent) {
             // Temporarily store dock state for wait period
-            temporaryDockState.set(intent.getIntExtra(Intent.EXTRA_DOCK_STATE, -1));
-            Log.vv(TAG, "dockStateReceiver() " + temporaryDockState.get());
+            temporaryDockState.set(intent.getIntExtra(EXTRA_DOCK_STATE, -1));
+            Log.d(TAG, "dockStateReceiver() " + temporaryDockState.get());
 
             // Store that dock state has changed
             lastDockStateChange.set(SystemClock.elapsedRealtime());
@@ -1350,11 +1373,24 @@ public class Io {
                     stop(false); //disabling io polling since MCU connection has been disconnected
                     // Set warm start to false
                     Log.v(TAG, "stopping io polling end");
+                } else if (dockState == EXTRA_DOCK_STATE_UNDOCKED && firstRun) {
+                    lastDockStateChange.set(SystemClock.elapsedRealtime());
+
+                    // Set warm start to false
+                    service.engine.setWarmStart(false);
+                    service.addEventWithExtra(EventType.EVENT_TYPE_DEVICE_UNDOCKED, dockState);
+
+                    Log.v(TAG, "stopping io polling begin");
+                    stop(false); //disabling io polling since MCU connection has been disconnected
+                    // Set warm start to false
+                    Log.v(TAG, "stopping io polling end");
                 }
             }
         } catch (Exception e) {
             Log.e(TAG, "dockStateReceiver Exception " + e.toString(), e);
         }
+
+        firstRun = false;
     }
 
     private Runnable delayedEngineOnTask  = new Runnable() {

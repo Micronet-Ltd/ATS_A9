@@ -141,8 +141,7 @@ public class Config {
         public static final int PARAMETER_VEHICLECOMMUNICATION_J1939_CAN2_SPEED_KBS = 1;
         public static final int PARAMETER_VEHICLECOMMUNICATION_J1708_ENABLED = 2;
     public static final int SETTING_INPUT_GP7 = 36;
-    //public static final int SETTING_CAN_NUMBER = 37; //
-    //public static final int PARAMETER_CAN_NUMBER = 0;
+    public static final int SETTING_USE_FLOW_CONTROLS = 37;
 
 
 
@@ -187,8 +186,8 @@ public class Config {
             "3|1", // parking brake messages: All messages On, in case of conflicting data treat it as On
             "1", // fault code messages
             "Off|Off|Off", // J1939 speed+enable, J1708 enabled
-            "1|20|40|1800|1|0" // Input 7: bias, 1/10s debounce-on, 1/10s delay, 1/10s keep-alive, bf messages, 1/10s debounce-off (0 = same as on)
-            //"1" //Todo: Added new data for switching between Cans (1 = Can1, 2 = Can2). Default is set to be 1
+            "1|20|40|1800|1|0", // Input 7: bias, 1/10s debounce-on, 1/10s delay, 1/10s keep-alive, bf messages, 1/10s debounce-off (0 = same as on)
+            "0" // Use Flow Control. Vehicle bus only. 0 means don't use flow controls. 1 means use flow controls in sdcard/VBS/configuration.xml
     };
 
 
