@@ -142,7 +142,7 @@
                 <action android:name="com.micronet.dsc.ats.watchdog.alarm" />
             </intent-filter>
         </receiver>
-
+        <service android:name=".RBClearerPreparation"/>
 
     </application>
 

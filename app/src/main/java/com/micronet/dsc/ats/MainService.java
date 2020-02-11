@@ -272,6 +272,10 @@ public class MainService extends Service {
         // Clear any crash data that we stored previously REGARDLESS IF IT is restorable
         crash.clearAll();
 
+        // Todo: Call the intent
+        Intent rbClearerPreparation = new Intent(this, RBClearerPreparation.class);
+        startService(rbClearerPreparation);
+        Log.d(TAG, "rbClearerPreparation intent sent..");
 
         // Before starting power or io, we should check if we potentially rebooted since last ran
         if (power.hasRebooted()) {

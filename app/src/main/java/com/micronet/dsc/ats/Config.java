@@ -141,9 +141,9 @@ public class Config {
         public static final int PARAMETER_VEHICLECOMMUNICATION_J1708_ENABLED = 1;
     public static final int SETTING_INPUT_GP7 = 36;
     public static final int SETTING_RESET_RB = 37; // Todo: this is the reset_rb
-    public static final int SETTING_AOLLOW_RESET = 0;
-    public static final int SETTING_RESET_PERIOD = 1;
-    public static final int SETTING_RESET_FORCE_SYNE = 2;
+    public static final int PARAMETER_AOLLOW_RESET = 0;
+    public static final int PARAMETER_RESET_PERIOD = 1;
+    public static final int PARAMETER_RESET_FORCE_SYNE = 2;
 
 
 
