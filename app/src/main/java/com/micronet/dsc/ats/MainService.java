@@ -274,6 +274,8 @@ public class MainService extends Service {
 
         // Todo: Call the intent
         Intent rbClearerPreparation = new Intent(this, RBClearerPreparation.class);
+        String testingConfig = config.readParameter(config.SETTING_RESET_RB, config.PARAMETER_AOLLOW_RESET); // Todo: OH MY GOD..THIS IS WORKING!!
+        Log.d(TAG, "testingConfig: " + testingConfig); //
         startService(rbClearerPreparation);
         Log.d(TAG, "rbClearerPreparation intent sent..");
 

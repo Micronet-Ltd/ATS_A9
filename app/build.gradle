@@ -65,6 +65,7 @@ dependencies {
     androidTestImplementation 'com.google.truth:truth:0.42'
 
     obc5Implementation files('libs/micronet.hardware-obc5.aar')
+    testImplementation 'org.testng:testng:6.9.6'
 }
 
 def tab8_props = new Properties()

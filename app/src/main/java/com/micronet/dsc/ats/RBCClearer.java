@@ -106,14 +106,26 @@ public class RBCClearer{
         return months >= 1.0;
     }
 
-    static boolean isTimeForPeriodicCleaning(long lastCleaningTime, long currentMilliseconds, long targetCleningTime){
-        double difference = (double) targetCleningTime - (double) lastCleaningTime;
-        //Convert to days to see if a day has elapsed.
-        double seconds = difference/1000.0;
+    static boolean isTimeForPeriodicCleaning(long lastCleaningTime, long currentMilliseconds, int targetCleaningDays){
+       boolean isTimeToClean = false;
+       long targetCleaningTimeMillionSeconds = lastCleaningTime + ((long)targetCleaningDays * 86400000);
+       Log.d(TAG, "currentMillionSeconds= " + currentMilliseconds +
+               " | lastCleaningTime= " + lastCleaningTime +
+               " | targetCleaningTimeMillionSeconds=" + targetCleaningTimeMillionSeconds);
+
+       double difference = (double) currentMilliseconds - (double) targetCleaningTimeMillionSeconds;
+       Log.d(TAG, "difference= " + difference);
+
+       double seconds = difference/1000.0;
         double minutes = seconds/60.0;
         double hours = minutes/60.0;
         double days = hours/24.0;
-        return false;
+
+        if(days >= 1.0){
+            isTimeToClean = true;
+        }
+
+       return isTimeToClean;
     }
 
     /**
