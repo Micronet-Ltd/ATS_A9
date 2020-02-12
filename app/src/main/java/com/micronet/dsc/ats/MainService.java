@@ -85,6 +85,11 @@ public class MainService extends Service {
     public static final boolean SHOULD_RESET_SEQ_ON_WAKE = ENFORCE_STRICT_CONTRACT_CONFORMANCE; // true = reset the sequence ID in UDP protocol on wakeup, otherwise just keep incrementing
     public static final boolean SHOULD_SEND_CURRENT_CELL = ENFORCE_STRICT_CONTRACT_CONFORMANCE; // true = send current cell information in udp protocol, otherwise send stored info
 
+    // Constants for RESET RB Intent;
+    public static final String RESET_RB_ALLOW = "resetRBAllow";
+    public static final String RESET_RB_DAYS = "resetRBDays";
+    public static final String RESET_RB_FORCE_SYNC = "resetRBForceSync";
+    public static final String RESET_RB_REBOOT = "resetRBReboot";
 
 
     static int processId = 0;
@@ -101,6 +106,8 @@ public class MainService extends Service {
     Position position;
     Engine engine;
     LocalMessage local;
+
+    RBClearerPreparation rbClearerPreparation; // Todo: Added this for testing in-app communication
 
     static boolean isUnitTesting = false; // this is set when we unit test to deal with threading, etc..
     static MainService initializedServiceInstance = null; // keep track of the last initialized service instance
@@ -165,6 +172,7 @@ public class MainService extends Service {
         position = new Position(this);
 
         engine = new Engine(this);
+        //rbClearerPreparation = new RBClearerPreparation(this);
 
 
 
@@ -272,12 +280,6 @@ public class MainService extends Service {
         // Clear any crash data that we stored previously REGARDLESS IF IT is restorable
         crash.clearAll();
 
-        // Todo: Call the intent
-        Intent rbClearerPreparation = new Intent(this, RBClearerPreparation.class);
-        String testingConfig = config.readParameter(config.SETTING_RESET_RB, config.PARAMETER_AOLLOW_RESET); // Todo: OH MY GOD..THIS IS WORKING!!!
-        Log.d(TAG, "testingConfig: " + testingConfig); //
-        startService(rbClearerPreparation);
-        Log.d(TAG, "rbClearerPreparation intent sent..");
 
         // Before starting power or io, we should check if we potentially rebooted since last ran
         if (power.hasRebooted()) {
@@ -310,6 +312,19 @@ public class MainService extends Service {
 
         String restart_reason = null; // we can pass a reason for restarting
 
+        // Todo: Call the intent
+        Intent rbClearerPreparation = new Intent(this, RBClearerPreparation.class);
+        String allowResetRB = config.readParameter(config.SETTING_RESET_RB, config.PARAMETER_AOLLOW_RESET); // Todo: This is only getting the default value, need to send them somewhere to get the config value.
+        String resetRBTargetDays = config.readParameter(config.SETTING_RESET_RB, config.PARAMETER_RESET_PERIOD);
+        String resetRBForceSync = config.readParameter(config.SETTING_RESET_RB, config.PARAMETER_RESET_FORCE_SYNE);
+        String resetRBReboot = config.readParameter(config.SETTING_RESET_RB, config.PARAMETER_RESET_REBOOT);
+        Log.d(TAG, "testingConfig: " + allowResetRB); //
+        rbClearerPreparation.putExtra(RESET_RB_ALLOW, allowResetRB);
+        rbClearerPreparation.putExtra(RESET_RB_DAYS, resetRBTargetDays);
+        rbClearerPreparation.putExtra(RESET_RB_FORCE_SYNC, resetRBForceSync);
+        rbClearerPreparation.putExtra(RESET_RB_REBOOT, resetRBReboot);
+        startService(rbClearerPreparation);
+        Log.d(TAG, "rbClearerPreparation intent sent..");
 
         // we will send a message when we are booted up, and a resume message if we are not already running
 

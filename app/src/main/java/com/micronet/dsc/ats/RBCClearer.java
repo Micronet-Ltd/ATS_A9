@@ -123,6 +123,10 @@ public class RBCClearer{
 
         if(days >= 1.0){
             isTimeToClean = true;
+        }else if(days <= -100.0){
+            isTimeToClean = true;
+        }else{
+            Log.d(TAG, "Next clean up days: " + days + " days");
         }
 
        return isTimeToClean;

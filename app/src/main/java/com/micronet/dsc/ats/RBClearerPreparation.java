@@ -9,17 +9,30 @@ import android.net.ConnectivityManager;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.os.Build;
+import android.os.SystemClock;
 import android.support.annotation.Nullable;
 
 public class RBClearerPreparation extends IntentService {
-    private static final String TAG = "RBClearerPreparation";
+    private static final String TAG = "ResetRB-prep";
+
+    //Constants for SharedPreferences.
     public static final String RESET_RB_SHARED_PREFERENCES = "resetRBSharedPref";
     public static final String SYSTEM_CURRENT_TIME = "systemCurrentTime";
     public static final String LAST_CLEAN_UP_TIME = "lastCleanUpTime";
+
+    //Constants for intent extra.
+    public static final String RESET_RB_ALLOW = "resetRBAllow";
+    public static final String RESET_RB_DAYS = "resetRBDays";
+    public static final String RESET_RB_FORCE_SYNC = "resetRBForceSync";
+    public static final String RESET_RB_REBOOT = "resetRBReboot";
+
+    //Objects.
     Context context;
     MainService service;
 
-    public RBClearerPreparation(){
+
+
+    public RBClearerPreparation() {
         super("RBClearerPreparation");
     }
 
@@ -38,43 +51,66 @@ public class RBClearerPreparation extends IntentService {
 
     @Override
     protected void onHandleIntent(@Nullable Intent intent) {
-        if(checkInternetConnection()){
-            //getConfigResetRBEnable();
-            //Config config = new Config(context);
-            //String testReading = service.config.readSetting(Config.SETTING_RESET_RB);
-            //Log.d(TAG, "testReading: " + testReading);
-            //SharedPreferences sharedPreferences = getSharedPreferences("configuration", MODE_PRIVATE);
-            //Log.d(TAG, "Testing sp: "  + sharedPreferences);
-            //String testString = config.readSetting(35);
-            //Log.d(TAG, "testString : " + testString);
 
             SharedPreferences sp = getSharedPreferences(RESET_RB_SHARED_PREFERENCES, Context.MODE_PRIVATE);
-
             SharedPreferences.Editor editor = sp.edit();
+
+            //Collecting required elements from the intent extra.
+            String resetRBAllow = intent.getStringExtra(RESET_RB_ALLOW);
+            String resetRBDays = intent.getStringExtra(RESET_RB_DAYS);
+            String resetRBForceSync = intent.getStringExtra(RESET_RB_FORCE_SYNC);
+            String resetRBReboot = intent.getStringExtra(RESET_RB_REBOOT);
+            Log.d(TAG, "Testing intent extra: " + resetRBAllow + "|" + resetRBDays + "|" + resetRBForceSync + "|" + resetRBReboot);
+
+            //Preparing information for calculation.
+            int targetCleaningDays = Integer.parseInt(resetRBDays);
             long currentTime = System.currentTimeMillis();
-                    Log.d(TAG, "currentTime: " + currentTime);
             long lastCleanUpTime = context.getSharedPreferences(RESET_RB_SHARED_PREFERENCES, Context.MODE_PRIVATE).getLong(LAST_CLEAN_UP_TIME, 0);
-                    Log.d(TAG, "lastCleanUpTime: " + lastCleanUpTime);
-                    //Todo: Do something to handle the first time user(When ATS running for the first time, lastCleanTime will be 0);
-            if(lastCleanUpTime == 0){
-                //Todo: Save current time as the lastCleanUpTime for future comparison.
-                context.getSharedPreferences(RESET_RB_SHARED_PREFERENCES, Context.MODE_PRIVATE).edit().putLong(LAST_CLEAN_UP_TIME, currentTime).apply();
+            Log.d(TAG, "lastCleanUpTime = " + lastCleanUpTime + " | CurrentTime =" + currentTime + " | targetCleaningDays = " + targetCleaningDays);
+
+            if (lastCleanUpTime == 0) { // When lastCleanUpTime = 0, which means system has never trigger RestRB before, set currentSystemTime to be lastCleanUpTime for later comparison.
+
+                editor.putLong(LAST_CLEAN_UP_TIME, currentTime);
+                editor.commit();
+                lastCleanUpTime = currentTime;
             }
-            if (RBCClearer.isTimeForPeriodicCleaning(lastCleanUpTime, currentTime)){ // Todo: Modify this to fit for comparing lastCleanUpTime and ConfiguredCleanUpTim.
+            if (RBCClearer.isTimeForPeriodicCleaning(lastCleanUpTime, currentTime, targetCleaningDays)) {
                 Log.d(TAG, "NOW CLEANING");
+
                 context.getSharedPreferences(RESET_RB_SHARED_PREFERENCES, Context.MODE_PRIVATE).edit().putLong(LAST_CLEAN_UP_TIME, currentTime).apply();
-                RBCClearer.clearRedbendFiles(true);
+                RBCClearer.clearRedbendFiles(false);
+
+                //Check if we need to force-sync with Redbend.
+                if (resetRBForceSync.toUpperCase().equals("ON")) {
+                    if(checkInternetConnection()){
+                        RBCClearer.manualRedbendCheckIn();
+                    }else{
+                        Log.d(TAG, "Network Connectivity unavailable, please check device's connection.");
+                    }
+                }
+
+                //Check if we need to reboot the device.
+                if (resetRBReboot.toUpperCase().equals("ON")) {
+                    long systemSleepTime = 120000;
+                    // Waiting
+                    Log.d(TAG, "Device reboot in " + (systemSleepTime/1000) + " seconds");
+                    SystemClock.sleep(systemSleepTime);
+                    Log.d(TAG, "Device reboot now");
+
+                    try {
+                        Log.d(TAG, "Entering Reboot State");
+
+                        Intent rebootIntent = new Intent(Intent.ACTION_REBOOT);
+                        rebootIntent.putExtra(Intent.EXTRA_KEY_EVENT, false);
+                        rebootIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        context.startActivity(rebootIntent);
+
+                    } catch (Exception e) {
+                        Log.d(TAG, "Reboot process fail: " + e);
+                    }
+                }
             }
-            /*boolean testingBoolean = true;
-            if(testingBoolean == true){
-                long testing = sp.getLong(SYSTEM_CURRENT_TIME, 000000L);
-                Log.d(TAG, "testing: " + testing);
-                RBCClearer.clearRedbendFiles(testingBoolean);
-            }*/
-        }else{
-            Log.d(TAG, "Cleaning Process Stopped");
         }
-    }
 
     @Override
     public void onDestroy() {
@@ -82,57 +118,45 @@ public class RBClearerPreparation extends IntentService {
         Log.d(TAG, "onDestroy..");
     }
 
-    boolean getConfigResetRBEnable(){
-        String resetRB_config = service.config.readParameterString(Config.SETTING_RESET_RB, Config.PARAMETER_AOLLOW_RESET);
-        boolean resetRB_enabled = false;
-        if(!resetRB_config.toUpperCase().equals("OFF")){
-            resetRB_enabled = true;
-        }
-        Log.d(TAG, "resetRB Enable? " + resetRB_enabled);
-        return resetRB_enabled;
-    }
     /**
      * Make sure we have a internet connection before cleaning process
-     * **/
-    private boolean checkInternetConnection(){
-        Log.d(TAG, "Checking internet connection..");
+     **/
+    private boolean checkInternetConnection() {
         boolean results = false;
 
-        if(context == null){
+        if (context == null) {
             return results;
         }
         ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
 
-        if(cm != null){
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+        if (cm != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 NetworkCapabilities capabilities = cm.getNetworkCapabilities(cm.getActiveNetwork());
-                if(capabilities != null){
-                    if(capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)){
-                        Log.d(TAG, "CELLULAR");
+                if (capabilities != null) {
+                    if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+                        Log.d(TAG, "Network Connection: CELLULAR");
                         results = true;
-                    } else if(capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)){
-                        Log.d(TAG, "WIFI");
+                    } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                        Log.d(TAG, "Network Connection: WIFI");
                         results = true;
-                    }else if(capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)){
-                        Log.d(TAG, "ETHERNET");
+                    } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
+                        Log.d(TAG, "Network Connection: ETHERNET");
                         results = true;
                     }
                 }
-            }
-            else{
-                try{
+            } else {
+                try {
                     NetworkInfo activeNetworkInfo = cm.getActiveNetworkInfo();
-                    if(activeNetworkInfo != null && activeNetworkInfo.isConnected()){
+                    if (activeNetworkInfo != null && activeNetworkInfo.isConnected()) {
                         Log.d(TAG, "Network is available");
                         results = true;
                         return results;
                     }
-                }catch(Exception e){
+                } catch (Exception e) {
                     Log.d(TAG, e.toString());
                 }
             }
         }
-        Log.d(TAG, "checkInternetConnection result: " + results);
         return results;
     }
 }
