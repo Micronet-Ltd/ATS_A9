@@ -151,6 +151,10 @@
             </intent-filter>
         </service>
 
+        <receiver android:name=".RBReceiver">
+
+        </receiver>
+
     </application>
 
 </manifest>
