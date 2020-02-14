@@ -3,8 +3,14 @@ package com.micronet.dsc.ats;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.NetworkCapabilities;
+import android.net.NetworkInfo;
+import android.os.Build;
+import android.os.SystemClock;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -50,22 +56,36 @@ public class RBReceiver extends BroadcastReceiver {
 
             String action = intent.getStringExtra(RB_ACTION_EXTRA);
             switch(action){
-                case RB_CLEAN_CHECK:
-                    Log.d(TAG, RB_CLEAN_CHECK);
-                    RBCClearer.clearRedbendFiles(true);
-                    break;
-                case RB_CLEAN:
+
+                case RB_CLEAN: //Trigger ResetRB Cleaner now.
                     Log.d(TAG, RB_CLEAN);
-                    RBCClearer.clearRedbendFiles(false);
-                case RB_FORCE_SYNC:
-                    Log.d(TAG, RB_FORCE_SYNC);
-                    //Todo: check for internet state
-                    RBCClearer.manualRedbendCheckIn();
+                    String manualCheck = intent.getStringExtra(RB_CLEAN_CHECK); //Should we force sync after clean-up.
+                    if(manualCheck.toUpperCase().equals("TRUE")){
+                        RBCClearer.clearRedbendFiles(true);
+                        Log.d(TAG, "ManualCheck after clean = TRUE");
+                    }else if(manualCheck.toUpperCase().equals("FALSE")){
+                        RBCClearer.clearRedbendFiles(false);
+                        Log.d(TAG, "ManualCheck after clean = FALSE");
+                    }else{
+                        RBCClearer.clearRedbendFiles(false); //Default is set to be false.
+                        Log.d(TAG, "ManualCheck after clean = DEFAULT");
+                    }
                     break;
-                case RB_CHANGE_CONFIGURATION:
-                    String newValue = intent.getStringExtra(RB_CONFIGURATION_VALUE);
+
+                case RB_FORCE_SYNC: //Force sync with RedBend server NOW.
+                    Log.d(TAG, RB_FORCE_SYNC);
+
+                    if(checkInternetConnection(context)){ // Check for internet before running process.
+                        RBCClearer.manualRedbendCheckIn();
+                    }else{
+                        Log.d(TAG, "Internet Connectivity Unavailable, please check your network.");
+                    }
+                    break;
+
+                case RB_CHANGE_CONFIGURATION: //Update ResetRB configuration setting.
+                    String newValue = intent.getStringExtra(RB_CONFIGURATION_VALUE); //Receiving new setting value. Format has to be - "boolean|int|boolean|boolean"
                     Log.d(TAG, RB_CHANGE_CONFIGURATION + " - " + newValue);
-                    boolean updatePass = updateSharedPreference(newValue);
+                    boolean updatePass = updateSharedPreference(newValue); //Update received value into SharedPreference.
                     Log.d(TAG, "updatePass: " + updatePass);
                     if(updatePass){
                         //Todo: update the bak file
@@ -108,7 +128,9 @@ public class RBReceiver extends BroadcastReceiver {
         FileInputStream inStream = null;
         FileOutputStream outputStream = null;
         File src = null;
+        File tempSrc = null;
         String fileName = "configuration.xml.bak";
+        String tempFileName = "temp.txt";
         String oldContent = "";
         BufferedReader reader = null;
         FileWriter writer = null;
@@ -125,52 +147,38 @@ public class RBReceiver extends BroadcastReceiver {
         //open the bak file
         try{
             src = new File(file_path, fileName);
-            Log.d(TAG, "Got the file: " + src);
+            tempSrc = new File(file_path, tempFileName);
+            Log.d(TAG, "Got the file: " + src + " / and temp file: " + tempSrc);
         }catch(Exception e){
             Log.d(TAG, "STAGE 1 ERROR: " + e);
         }
 
-        /*try{
-            reader = new BufferedReader(new FileReader(src));
-            String line = reader.readLine();
-            while(line != null){
-                oldContent = oldContent + line + System.lineSeparator();
-                line = reader.readLine();
-            }
-            Log.d(TAG, "STAGE 2 FINISHED: " + oldContent);
-        }catch(Exception e){
-            Log.d(TAG, "STAGE 2 ERROR: " + e);
-        }*/
-        //locate  the target line of string
-        //Todo: the following code is problematic, need to work on it!
         try{
-            StringBuffer buffer = new StringBuffer();
-            String fileContents = buffer.toString();
-            Scanner scanner = new Scanner(src);
+            BufferedReader bReader = new BufferedReader(new FileReader(src));
+            BufferedWriter bWriter = new BufferedWriter(new FileWriter(tempSrc));
+
+
             String targetString = "name=\"37\"";
             String newLine = "<string name=\"37\">"+newValue+"</string>\n";
-            int lineNumber = 0;
-            while(scanner.hasNextLine()){
-                String line = scanner.nextLine();
-                lineNumber++;
-                if(line.contains(targetString)){
-                    Log.d(TAG, "Found it! " + line + " | lineNumber: " + lineNumber);
-                    fileContents = fileContents.replaceAll(line, newLine);
-                    FileWriter fileWriter = new FileWriter(src);
-                    fileWriter.append(fileContents);
-                    fileWriter.flush();
+            String currentLine;
+            while((currentLine = bReader.readLine())!=null){
+                String trimmedLine = currentLine.trim();
+                if(trimmedLine.contains(targetString)){
+                    bWriter.write(newLine + System.getProperty("line.separator"));
+                    continue;
                 }
+                bWriter.write(currentLine + System.getProperty("line.separator"));
             }
+            bWriter.close();
+            bReader.close();
+            tempSrc.renameTo(src);
 
-            scanner.close();
+
         }catch(Exception e){
-            Log.d(TAG, "STAGE 2 ERROR" + e);
+            Log.d(TAG, "STAGE 2 ERROR: " + e);
         }
-        //replace it with new string
 
-        //finish editing
-
-        //close the file
+       
     }
 
     /**
@@ -197,5 +205,44 @@ public class RBReceiver extends BroadcastReceiver {
             Log.d(TAG, "updateSharedPreference Fail: " + e);
         }
         return updatePass;
+    }
+
+    private boolean checkInternetConnection(Context context){
+        boolean results = false;
+
+        if (context == null) {
+            return results;
+        }
+        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        if (cm != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NetworkCapabilities capabilities = cm.getNetworkCapabilities(cm.getActiveNetwork());
+                if (capabilities != null) {
+                    if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+                        Log.d(TAG, "Network Connection: CELLULAR");
+                        results = true;
+                    } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                        Log.d(TAG, "Network Connection: WIFI");
+                        results = true;
+                    } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
+                        Log.d(TAG, "Network Connection: ETHERNET");
+                        results = true;
+                    }
+                }
+            } else {
+                try {
+                    NetworkInfo activeNetworkInfo = cm.getActiveNetworkInfo();
+                    if (activeNetworkInfo != null && activeNetworkInfo.isConnected()) {
+                        Log.d(TAG, "Network is available");
+                        results = true;
+                        return results;
+                    }
+                } catch (Exception e) {
+                    Log.d(TAG, e.toString());
+                }
+            }
+        }
+        return results;
     }
 }
