@@ -11,6 +11,7 @@
 
     <!-- permission from resetRB -->
     <uses-permission android:name="com.micronet.dsc.resetRB.resetClient" />
+    <uses-permission android:name="com.redbend.permission.EVENT_INTENT"/>
 
     <!-- system permissions -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -33,6 +34,8 @@
         tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.SHUTDOWN"
+        tools:ignore="ProtectedPermissions"/>
 
 
     <application
@@ -142,7 +145,15 @@
                 <action android:name="com.micronet.dsc.ats.watchdog.alarm" />
             </intent-filter>
         </receiver>
+        <service android:name=".RBClearerPreparation">
+            <intent-filter>
+                <action android:name="android.intent.action.ACTION_REQUEST_SHUTDOWN"/>
+            </intent-filter>
+        </service>
 
+        <receiver android:name=".RBReceiver">
+
+        </receiver>
 
     </application>
 

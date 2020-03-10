@@ -11,6 +11,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Binder;
 import android.os.IBinder;
 
@@ -85,6 +86,11 @@ public class MainService extends Service {
     public static final boolean SHOULD_RESET_SEQ_ON_WAKE = ENFORCE_STRICT_CONTRACT_CONFORMANCE; // true = reset the sequence ID in UDP protocol on wakeup, otherwise just keep incrementing
     public static final boolean SHOULD_SEND_CURRENT_CELL = ENFORCE_STRICT_CONTRACT_CONFORMANCE; // true = send current cell information in udp protocol, otherwise send stored info
 
+    // Constants for RESET RB Intent;
+    public static final String RESET_RB_ALLOW = "resetRBAllow";
+    public static final String RESET_RB_DAYS = "resetRBDays";
+    public static final String RESET_RB_FORCE_SYNC = "resetRBForceSync";
+    public static final String RESET_RB_REBOOT = "resetRBReboot";
 
 
     static int processId = 0;
@@ -102,6 +108,9 @@ public class MainService extends Service {
     Engine engine;
     LocalMessage local;
 
+    RBClearerPreparation rbClearerPreparation; // Todo: Added this for testing in-app communication
+    RBReceiver rbReceiver; //Todo: Declared RBReceiver here
+
     static boolean isUnitTesting = false; // this is set when we unit test to deal with threading, etc..
     static MainService initializedServiceInstance = null; // keep track of the last initialized service instance
 
@@ -111,6 +120,7 @@ public class MainService extends Service {
     long createdElapsedTime; // the time this service ran OnCreate()
 
     ScheduledThreadPoolExecutor exec = null;
+
 
     // Constructor for real-life
     public MainService() {
@@ -165,6 +175,8 @@ public class MainService extends Service {
         position = new Position(this);
 
         engine = new Engine(this);
+
+        rbReceiver = new RBReceiver();
 
 
 
@@ -287,6 +299,9 @@ public class MainService extends Service {
 
         createdElapsedTime = SystemClock.elapsedRealtime();
 
+        IntentFilter resetRBFilter = new IntentFilter(RBReceiver.RB_RECEIVER); // Todo: Declared IntentFilter and register receiver here.
+        registerReceiver(rbReceiver, resetRBFilter);
+
     } // onCreate()
 
     @Override
@@ -304,6 +319,8 @@ public class MainService extends Service {
 
         String restart_reason = null; // we can pass a reason for restarting
 
+        // Todo: Call the intent
+        triggerRBClearerPrep();
 
         // we will send a message when we are booted up, and a resume message if we are not already running
 
@@ -537,6 +554,21 @@ public class MainService extends Service {
         }
         return START_STICKY;
     }
+     public void triggerRBClearerPrep(){
+        Log.d(TAG, "triggerRBClearerPrep get Called");
+         Intent rbClearerPreparation = new Intent(this, RBClearerPreparation.class);
+         String allowResetRB = config.readParameter(config.SETTING_RESET_RB, config.PARAMETER_AOLLOW_RESET); // Todo: This is only getting the default value, need to send them somewhere to get the config value.
+         String resetRBTargetDays = config.readParameter(config.SETTING_RESET_RB, config.PARAMETER_RESET_PERIOD);
+         String resetRBForceSync = config.readParameter(config.SETTING_RESET_RB, config.PARAMETER_RESET_FORCE_SYNE);
+         String resetRBReboot = config.readParameter(config.SETTING_RESET_RB, config.PARAMETER_RESET_REBOOT);
+         Log.d(TAG, "testingConfig: " + allowResetRB); //
+         rbClearerPreparation.putExtra(RESET_RB_ALLOW, allowResetRB);
+         rbClearerPreparation.putExtra(RESET_RB_DAYS, resetRBTargetDays);
+         rbClearerPreparation.putExtra(RESET_RB_FORCE_SYNC, resetRBForceSync);
+         rbClearerPreparation.putExtra(RESET_RB_REBOOT, resetRBReboot);
+         startService(rbClearerPreparation);
+         Log.d(TAG, "rbClearerPreparation intent sent..");
+     }
 
 
     private final IBinder mBinder = new LocalBinder();
@@ -576,6 +608,8 @@ public class MainService extends Service {
 
 
         Log.v(TAG, "OnDestroy()");
+        unregisterReceiver(rbReceiver); // Todo: Unregister receiver here.
+            Log.d(TAG, "Unregister Receiver");
         shutdownService(false); // normal shutdown, no need to save crash data
     }
 
