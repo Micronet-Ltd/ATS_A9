@@ -22,7 +22,7 @@ public class J1939Test {
     private static TestCommon test;
     private static MainService service;
     private static J1939 j1939;
-
+    private static String TAG = "J1939Test";
     @BeforeClass
     public static void setUp() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
@@ -97,6 +97,19 @@ public class J1939Test {
 
     } // test_packet2frame
 
+
+    @Test
+    public void discoverBus(){
+        int bitrate = j1939.busTypeToSpeed(5);
+        Log.d(TAG, "id 5 bitrate = " + bitrate);
+        bitrate = j1939.busTypeToSpeed(6);
+        Log.d(TAG, "id 6 bitrate = " + bitrate);
+
+        j1939.discoverBus(5, true, false);
+        String testingData = j1939.getTestingData;
+        Log.d(TAG, "testingData: " + testingData);
+
+    }
     @Test
     public void testFrameToPacket() {
 

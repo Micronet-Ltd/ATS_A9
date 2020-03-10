@@ -136,16 +136,17 @@ public class Config {
         public static final int PARAMETER_PARKING_BRAKE_CONFLICT_STATE = 1; // if different nodes report different states, then treat the brake as (1=on)
     public static final int SETTING_FAULT_CODES = 34; //
         public static final int PARAMETER_FAULT_CODE_MESSAGES = 0;
-    public static final int SETTING_VEHICLECOMMUNICATION = 35; //
+    public static final int SETTING_VEHICLECOMMUNICATION = 35; // Todo: Re-structured this setting to be 3 parameters.
         public static final int PARAMETER_VEHICLECOMMUNICATION_J1939_SPEED_KBS = 0;
-        public static final int PARAMETER_VEHICLECOMMUNICATION_J1708_ENABLED = 1;
+        public static final int PARAMETER_VEHICLECOMMUNICATION_J1939_CAN2_SPEED_KBS = 1;
+        public static final int PARAMETER_VEHICLECOMMUNICATION_J1708_ENABLED = 2;
     public static final int SETTING_INPUT_GP7 = 36;
     public static final int SETTING_RESET_RB = 37; // Todo: this is the reset_rb
     public static final int PARAMETER_AOLLOW_RESET = 0;
     public static final int PARAMETER_RESET_PERIOD = 1;
     public static final int PARAMETER_RESET_FORCE_SYNE = 2;
     public static final int PARAMETER_RESET_REBOOT = 3;
-
+    public static final int SETTING_USE_FLOW_CONTROLS = 38;
 
 
 
@@ -189,9 +190,10 @@ public class Config {
             "3", // reverse gear messages
             "3|1", // parking brake messages: All messages On, in case of conflicting data treat it as On
             "1", // fault code messages
-            "Off|Off", // J1939 speed+enable, J1708 enabled
+            "Off|Off|Off", // J1939 speed+enable, J1708 enabled
             "1|20|40|1800|1|0", // Input 7: bias, 1/10s debounce-on, 1/10s delay, 1/10s keep-alive, bf messages, 1/10s debounce-off (0 = same as on)
             "On|30|On|Off" // Reset_RB: Allow = On| period = 30| Force-sync = On | Reboot = Off.
+            "0" // Use Flow Control. Vehicle bus only. 0 means don't use flow controls. 1 means use flow controls in sdcard/VBS/configuration.xml
     };
 
 

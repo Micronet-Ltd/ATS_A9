@@ -45,6 +45,9 @@ public class ConfigTest {
         //assertEquals(Config.SETTING_DEFAULTS[SETTING_SERVER_ADDRESS], res);
         assertEquals("30|50|90|300", server);
 
+        String canNumber = cf.readSetting(Config.SETTING_VEHICLECOMMUNICATION);
+        Log.d(TAG, "canNumber");
+        assertEquals("Off|Off|Off" , canNumber);
 
         // Read just one parameter from a setting value
 
@@ -52,14 +55,24 @@ public class ConfigTest {
         Log.d(TAG, "ip = " + ip);
         String port = cf.readParameter(Config.SETTING_SERVER_ADDRESS, 1);
 
+
         assertEquals("10.0.2.2", ip);
         assertEquals("9999", port);
 
+        String can1 = cf.readParameter(Config.SETTING_VEHICLECOMMUNICATION, Config.PARAMETER_VEHICLECOMMUNICATION_J1939_SPEED_KBS);
+        String can2 = cf.readParameter(Config.SETTING_VEHICLECOMMUNICATION, Config.PARAMETER_VEHICLECOMMUNICATION_J1939_CAN2_SPEED_KBS);
+        String j1708 = cf.readParameter(Config.SETTING_VEHICLECOMMUNICATION, Config.PARAMETER_VEHICLECOMMUNICATION_J1708_ENABLED);
+
+        assertEquals("Off", can1);
+        assertEquals("Off", can2);
+        assertEquals("Off", j1708);
 
         // Read as an integer
         int port_num = cf.readParameterInt(Config.SETTING_SERVER_ADDRESS, 1);
         assertEquals(9999, port_num);
 
+        int can1num = cf.readParameterInt(Config.SETTING_VEHICLECOMMUNICATION, 0);
+        assertEquals(0, can1num);
         // Read an Array of setting values
 
         String[] message_type_array = cf.readParameterArray(Config.SETTING_BACKOFF_RETRIES);
@@ -74,6 +87,9 @@ public class ConfigTest {
 
         assertEquals(10, Integer.parseInt(message_type_array[0]));
 
+        // Read an String.
+        String can1String = cf.readParameterString(Config.SETTING_VEHICLECOMMUNICATION, 2);
+        Log.d(TAG, "can1String = " + can1String);
         // .. etc..
 
 
@@ -91,7 +107,18 @@ public class ConfigTest {
         String port = cf.readParameter(Config.SETTING_SERVER_ADDRESS, 1);
 
         assertEquals("2222", port);
-    } // testReadDefaults()
+
+        //Testing for Restructured Setting_id 15 reading:
+        cf.writeSetting(Config.SETTING_VEHICLECOMMUNICATION, "AUTO|250|Off");
+        String can1 = cf.readParameter(Config.SETTING_VEHICLECOMMUNICATION, Config.PARAMETER_VEHICLECOMMUNICATION_J1939_SPEED_KBS);
+        String can2 = cf.readParameter(Config.SETTING_VEHICLECOMMUNICATION, Config.PARAMETER_VEHICLECOMMUNICATION_J1939_CAN2_SPEED_KBS);
+        String j1708 = cf.readParameter(Config.SETTING_VEHICLECOMMUNICATION, Config.PARAMETER_VEHICLECOMMUNICATION_J1708_ENABLED);
+
+        assertEquals("AUTO", can1);
+        assertEquals("250", can2);
+        assertEquals("Off", j1708);
+        Log.d(TAG, "Reading the full value of setting_id 35 = " + cf.readSetting(Config.SETTING_VEHICLECOMMUNICATION));
+    }
 
     @Test
     public void testReadNotANumber() {
@@ -103,5 +130,7 @@ public class ConfigTest {
         int bad_int = cf.readParameterInt(Config.SETTING_SERVER_ADDRESS, Config.PARAMETER_SERVER_ADDRESS_IP);
 
         assertEquals(0, bad_int);
+
+
     }
 }

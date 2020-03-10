@@ -32,7 +32,7 @@ public class J1939 extends EngineBus {
 
 
     // Debug flags
-
+    static String getTestingData = "";
     //static final int DEBUG_FORCE_LAST_ADDRESS = 0x80; // always use 0x80 for the preferred address
     static final int DEBUG_FORCE_LAST_ADDRESS = 0 ; // do not force any particular last address
 
@@ -51,6 +51,7 @@ public class J1939 extends EngineBus {
     int[] canFilterIds;     // Frame Ids that we are interested in
     int[] canFilterMasks;   // Corresponding Masks for those ids
     boolean busTxIsReady; // this will be set to true once we are told by service that the bus Tx is ready
+    boolean useFlowControl = false;
 
 
     // These are really only used for logging
@@ -402,23 +403,33 @@ public class J1939 extends EngineBus {
         int bus_speed_kbs = 0;
         String bus_speed_str = engine.service.config.readParameterString(Config.SETTING_VEHICLECOMMUNICATION, Config.PARAMETER_VEHICLECOMMUNICATION_J1939_SPEED_KBS);
 
+        int bus_can2_speed_kbs = 0;
+        String bus_can2_speed_str = engine.service.config.readParameterString(Config.SETTING_VEHICLECOMMUNICATION, Config.PARAMETER_VEHICLECOMMUNICATION_J1939_CAN2_SPEED_KBS);
+
         if (!bus_speed_str.toUpperCase().equals("AUTO")) {
             bus_speed_kbs = engine.service.config.readParameterInt(Config.SETTING_VEHICLECOMMUNICATION, Config.PARAMETER_VEHICLECOMMUNICATION_J1939_SPEED_KBS);
         }
 
-        boolean auto_detect = true; // auto-detect the bitrate
+        if(!bus_can2_speed_str.toUpperCase().equals("AUTO")){
+            bus_can2_speed_kbs = engine.service.config.readParameterInt(Config.SETTING_VEHICLECOMMUNICATION, Config.PARAMETER_VEHICLECOMMUNICATION_J1939_CAN2_SPEED_KBS);
+        }
 
-        if (bus_speed_kbs != 0) { // we hard-configured a bus speed
+        boolean auto_detect = true; // auto-detect the bitrate
+        if ((bus_speed_kbs != 0) || (bus_can2_speed_kbs != 0)) { // we hard-configured a bus speed
             auto_detect = false; // no need to auto-detect,  just check & use this configured speed
 
             // force the bus speed
-            if (bus_speed_kbs == 500) {
-                last_known_bus_type = Engine.BUS_TYPE_J1939_500K;
-            } else {
-                last_known_bus_type = Engine.BUS_TYPE_J1939_250K;
-            }
+                if (bus_speed_kbs == 500) {
+                    //Todo: Something is happening here, there should be an implamentation for CAN2(Maybe declare new value to store the current CanNumber, like bus_speed_kbs)
+                    last_known_bus_type = Engine.BUS_TYPE_J1939_500K;
+                } else if(bus_speed_kbs == 250) {
+                    last_known_bus_type = Engine.BUS_TYPE_J1939_250K;
+                } else if(bus_can2_speed_kbs == 500){
+                    last_known_bus_type = Engine.BUS_TYPE_J1939_CAN2_500K;
+                }else if(bus_can2_speed_kbs == 250){
+                    last_known_bus_type = Engine.BUS_TYPE_J1939_CAN2_250K;
+                }
         }
-
 
         if (busTypeVerified) auto_detect = false; // no reason to auto-detect if we already know the answer.
 
@@ -756,22 +767,29 @@ public class J1939 extends EngineBus {
 
 
     int busTypeToSpeed(int bus_type) {
-        switch (bus_type) {
+        /*switch (bus_type) {
             case Engine.BUS_TYPE_J1939_500K:
                 return 500000;
             case Engine.BUS_TYPE_J1939_250K:
                 return 250000;
             default:
                 return 0;
+        }*/
+        if ((bus_type == Engine.BUS_TYPE_J1939_CAN2_500K) || (bus_type == Engine.BUS_TYPE_J1939_500K)){
+            return 500000;
+        }else if((bus_type == Engine.BUS_TYPE_J1939_CAN2_250K)||(bus_type == Engine.BUS_TYPE_J1939_250K)){
+            return 250000;
+        }else{
+            return 0;
         }
     }
 
-    int bitrateToBusType(int bitrate) {
+    int bitrateToBusType(int bitrate, int canNumber) {
         switch (bitrate) {
             case 500000:
-                return Engine.BUS_TYPE_J1939_500K;
+                return canNumber == 2 ? Engine.BUS_TYPE_J1939_500K : Engine.BUS_TYPE_J1939_CAN2_500K;
             case 250000:
-                return Engine.BUS_TYPE_J1939_250K;
+                return canNumber == 2 ? Engine.BUS_TYPE_J1939_250K : Engine.BUS_TYPE_J1939_CAN2_250K;
             default:
                 return Engine.BUS_TYPE_NONE;
         }
@@ -786,21 +804,33 @@ public class J1939 extends EngineBus {
     ///////////////////////////////////////////////////////////////
     void discoverBus(int bus_type, boolean verified, boolean auto_detect) {
 
-        int bitrate = busTypeToSpeed(bus_type);
 
+        int bitrate = busTypeToSpeed(bus_type); // Todo: this is only getting the speed(25000/50000), need something to get the CanNumber!
         //Log.v(TAG, "discoverBus starting @ " + bitrate + "kb " + (verified ? "pre-verified " : "unverified ") + (auto_detect ? "auto-detect" : ""));
+        int busCanNumber = 0;
+
+        // Matching busCanNumber into meaningful value for VBS.
+        if((bus_type == Engine.BUS_TYPE_J1939_250K)||(bus_type == Engine.BUS_TYPE_J1939_500K)){
+            busCanNumber = 2; // 2 = Can1
+        }
+        else if((bus_type == Engine.BUS_TYPE_J1939_CAN2_250K)||(bus_type == Engine.BUS_TYPE_J1939_CAN2_500K)){
+            busCanNumber = 3; // 3 = Can2
+        }
 
         // clear the J1939 bus types in the engine communication bitfield, we will mark the correct one below
         engine.clearBusDetected(Engine.BUS_TYPE_J1939_500K);
-        engine.clearBusDetected(Engine.BUS_TYPE_J1939_250K);
+        engine.clearBusDetected(Engine.BUS_TYPE_J1939_250K); // Todo: clear the bitfield for can 2 as well.(Done)
+        engine.clearBusDetected(Engine.BUS_TYPE_J1939_CAN2_250K);
+        engine.clearBusDetected(Engine.BUS_TYPE_J1939_CAN2_500K);
 
+        getTestingData = bitrate + "-" + verified +"-" + auto_detect + "-" + canFilterIds + "-" + canFilterMasks + "-" + busCanNumber;
         if (bitrate != 0) {
-            startCanBus(bitrate, verified, auto_detect, canFilterIds, canFilterMasks);
+            startCanBus(bitrate, verified, auto_detect, canFilterIds, canFilterMasks, busCanNumber, useFlowControl);
         } else {
             // unknown bitrate
             if (auto_detect) {
                 // use 250kbs as starting point since nothing was specified
-                startCanBus(DEFAULT_AUTODETECT_BITRATE, false, auto_detect, canFilterIds, canFilterMasks);
+                startCanBus(DEFAULT_AUTODETECT_BITRATE, false, auto_detect, canFilterIds, canFilterMasks, busCanNumber, useFlowControl);
             } else {
                 Log.e(TAG, "Invalid engine bus type #" + bus_type);
             }
@@ -814,10 +844,10 @@ public class J1939 extends EngineBus {
     // markDiscovered()
     //  remember that we have had communication over a bus at this bitrate
     ///////////////////////////////////////////////////////////////
-    void markDiscovered(int bitrate) {
+    void markDiscovered(int bitrate, int canNumber) {
         int bus_type;
 
-        bus_type = bitrateToBusType(bitrate);
+        bus_type = bitrateToBusType(bitrate, canNumber);
 
         if (bitrate == 0) {
             Log.e(TAG, "VBS not reporting CAN bitrate .. is VBS upgraded?");
@@ -2185,14 +2215,14 @@ public class J1939 extends EngineBus {
     //  This runnable will be posted by the Engine class whenever we are ready to write on the bus
     //      It can also be used as an indication that we have discovered the bus speed
     ///////////////////////////////////////////////////////////////
-    void busReadyTxCallback(int bitrate) {
+    void busReadyTxCallback(int bitrate, int canNumber) {
 
         if (!busTxIsReady) {
             Log.v(TAG, "received TX Ready signal");
             busTxIsReady = true;
 
             // mark this bus as discovered
-            markDiscovered(bitrate);
+            markDiscovered(bitrate, canNumber);
 
             // next try to claim an address
             startClaimingAddress(last_known_bus_address);
@@ -2207,8 +2237,8 @@ public class J1939 extends EngineBus {
     }
 
 
-    void startCanBus(int bitrate, boolean skipVerify, boolean autoDetect, int[] ids, int[] masks) {
-        Log.v(TAG, "Starting Vbus/CAN Service " + bitrate +"kb " + (skipVerify ? "verify-off " : "verify-on ") + (autoDetect ? "auto-on" : "auto-off"));
+    void startCanBus(int bitrate, boolean skipVerify, boolean autoDetect, int[] ids, int[] masks, int busCanNumber, boolean flowControl) { // Todo: Add canNumber in here, and have it putExtra! Watch out the ordering of the parameters!
+        Log.v(TAG, "Starting CAN" + (busCanNumber-1) + " Service " + bitrate +"kb " + (skipVerify ? "verify-off " : "verify-on ") + (autoDetect ? "auto-on" : "auto-off"));
         //Log.v(TAG, "Filter[0] " + String.format("%X", ids[0]) + " " + String.format("%X", masks[0]));
 
 
@@ -2235,9 +2265,10 @@ public class J1939 extends EngineBus {
         serviceIntent.putExtra(VehicleBusConstants.SERVICE_EXTRA_AUTODETECT, autoDetect);
         serviceIntent.putExtra(VehicleBusConstants.SERVICE_EXTRA_HARDWAREFILTER_IDS, ids);
         serviceIntent.putExtra(VehicleBusConstants.SERVICE_EXTRA_HARDWAREFILTER_MASKS, masks);
+        serviceIntent.putExtra(VehicleBusConstants.SERVICE_EXTRA_CAN_NUMBER, busCanNumber);
+        serviceIntent.putExtra(VehicleBusConstants.SERVICE_EXTRA_FLOW_CONTROL, flowControl);
 
         engine.service.context.startForegroundService(serviceIntent);
-
     } // startCANBus()
 
     void stopCanBus() {
@@ -2264,9 +2295,7 @@ public class J1939 extends EngineBus {
 
     void setupCanBus(int[] additionalPGNs) {
 
-
         // find total number of filters we need
-
         int total_count = HW_RECEIVE_PFS.length + HW_RECEIVE_PGNS.length;
 
         if ((additionalPGNs != null) && (additionalPGNs.length > 0)) {
@@ -2304,6 +2333,10 @@ public class J1939 extends EngineBus {
                 }
             }
         }
+
+
+        // Check whether to use flow control or not.
+        useFlowControl = engine.service.config.readSetting(Config.SETTING_USE_FLOW_CONTROLS).equals("1");
 
     } // setupCanBus()
 
