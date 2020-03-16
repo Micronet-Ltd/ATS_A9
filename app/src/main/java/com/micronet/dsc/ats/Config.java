@@ -192,7 +192,7 @@ public class Config {
             "1", // fault code messages
             "Off|Off|Off", // J1939 speed+enable, J1708 enabled
             "1|20|40|1800|1|0", // Input 7: bias, 1/10s debounce-on, 1/10s delay, 1/10s keep-alive, bf messages, 1/10s debounce-off (0 = same as on)
-            "On|30|On|Off" // Reset_RB: Allow = On| period = 30| Force-sync = On | Reboot = Off.
+            "On|30|On|Off", // Reset_RB: Allow = On| period = 30| Force-sync = On | Reboot = Off.
             "0" // Use Flow Control. Vehicle bus only. 0 means don't use flow controls. 1 means use flow controls in sdcard/VBS/configuration.xml
     };
 

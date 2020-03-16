@@ -110,6 +110,7 @@ public class MainService extends Service {
 
     RBClearerPreparation rbClearerPreparation; // Todo: Added this for testing in-app communication
     RBReceiver rbReceiver; //Todo: Declared RBReceiver here
+    GSDActionReceiver gsdActionReceiver; //Todo: Declared GSDActivityReceiver over here.
 
     static boolean isUnitTesting = false; // this is set when we unit test to deal with threading, etc..
     static MainService initializedServiceInstance = null; // keep track of the last initialized service instance
@@ -301,6 +302,15 @@ public class MainService extends Service {
 
         IntentFilter resetRBFilter = new IntentFilter(RBReceiver.RB_RECEIVER); // Todo: Declared IntentFilter and register receiver here.
         registerReceiver(rbReceiver, resetRBFilter);
+
+        IntentFilter gsdFilter = new IntentFilter(GSDActionReceiver.GSD_COMMON_CONTROL);
+        registerReceiver(gsdActionReceiver, gsdFilter);
+
+
+        Intent testIntnet = new Intent(context, GSDActionReceiver.class);
+        testIntnet.putExtra("ACTION_EXTRA_CODE", "com.micronet.dsc.ats.GSD_ACTION_SYNC_NOW");
+        sendBroadcast(testIntnet);
+        Log.d(TAG, "testing broadcast sent");
 
     } // onCreate()
 

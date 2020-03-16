@@ -155,6 +155,16 @@
 
         </receiver>
 
+        <receiver   android:name=".GSDActionReceiver" android:exported="true"/>
+            <!--<intent-filter>
+                <action android:name="com.micronet.dsc.ats.GSD_COMMON_CONTROL"/>
+            </intent-filter>-->
+
+
+        <activity android:name=".GSDActivity"
+                  android:theme="@style/Theme.Transparent"
+            />
+
     </application>
 
 </manifest>
