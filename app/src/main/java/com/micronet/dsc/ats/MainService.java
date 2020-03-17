@@ -307,12 +307,14 @@ public class MainService extends Service {
         registerReceiver(gsdActionReceiver, gsdFilter);
 
 
-        Intent testIntnet = new Intent(context, GSDActionReceiver.class);
-        testIntnet.putExtra("ACTION_EXTRA_CODE", "com.micronet.dsc.ats.GSD_ACTION_SYNC_NOW");
-        sendBroadcast(testIntnet);
-        Log.d(TAG, "testing broadcast sent");
+        Intent GSDIntent = new Intent(context, GSDActionReceiver.class);
+        GSDIntent.putExtra(GSDActionReceiver.ACTION_EXTRA_CODE, GSDActionReceiver.GSD_ACTION_CHECK_STATE); // Todo: Change this to SYNC_NOW before release.
+        sendBroadcast(GSDIntent);
+        Log.d(TAG, "GSD Start-up Broadcast sent: " + GSDIntent+" - " + GSDIntent.getExtras());
+
 
     } // onCreate()
+
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {

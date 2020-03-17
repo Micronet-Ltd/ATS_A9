@@ -9,12 +9,11 @@ public class GSDActionReceiver extends BroadcastReceiver {
 
     public static final String GSD_COMMON_CONTROL = "com.micronet.dsc.ats.GSD_COMMON_CONTROL";
 
-
-    private static final String ACTION_EXTRA_CODE = "ACTION_EXTRA_CODE";
-    private static final String PIN_CODE = "PIN_CODE";
-    private static final String GSD_ACTION_SYNC_NOW = "com.micronet.dsc.ats.GSD_ACTION_SYNC_NOW";
-    private static final String GSD_ACTION_CHEKC_STATE = "com.micronet.dsc.ats.GSD_ACTION_CHECK_STATE";
-    private static final String GSD_ACTION_DO_REGISTER = "com.micronet.dsc.ats.GSD_ACTION_DO_REGISTER";
+    public static final String ACTION_EXTRA_CODE = "ACTION_EXTRA_CODE";
+    public static final String PIN_CODE = "PIN_CODE";
+    public static final String GSD_ACTION_SYNC_NOW = "com.micronet.dsc.ats.GSD_ACTION_SYNC_NOW";
+    public static final String GSD_ACTION_CHECK_STATE = "com.micronet.dsc.ats.GSD_ACTION_CHECK_STATE";
+    public static final String GSD_ACTION_DO_REGISTER = "com.micronet.dsc.ats.GSD_ACTION_DO_REGISTER";
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -31,9 +30,9 @@ public class GSDActionReceiver extends BroadcastReceiver {
                     context.startActivity(gsdActivityIntent);
                     Log.d(TAG, "gsdActivityIntent Sent: " + gsdActivityIntent);
                     break;
-                case GSD_ACTION_CHEKC_STATE:
+                case GSD_ACTION_CHECK_STATE:
                     gsdActivityIntent = new Intent(context, GSDActivity.class);
-                    gsdActivityIntent.putExtra(ACTION_EXTRA_CODE, GSD_ACTION_CHEKC_STATE);
+                    gsdActivityIntent.putExtra(ACTION_EXTRA_CODE, GSD_ACTION_CHECK_STATE);
                     gsdActivityIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     context.startActivity(gsdActivityIntent);
                     Log.d(TAG, "gsdActivityIntent Sent: " + gsdActivityIntent);

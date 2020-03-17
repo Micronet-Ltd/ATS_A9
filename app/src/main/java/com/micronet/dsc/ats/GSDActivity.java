@@ -127,6 +127,7 @@ public class GSDActivity extends Activity {
         intent3rd.setAction(ACTION_THIRDPARTY_BROADCAST);
         intent3rd.putExtra("sync", true);
         context.sendBroadcast(intent3rd);
+        Toast.makeText(this, "GSD SYNC", Toast.LENGTH_LONG).show();
         this.finish();
     }
 
