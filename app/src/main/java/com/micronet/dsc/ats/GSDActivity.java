@@ -3,6 +3,8 @@ package com.micronet.dsc.ats;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.widget.Toast;
@@ -14,6 +16,7 @@ import java.util.Map;
 public class GSDActivity extends Activity {
     private static final String TAG = "GSDActivity";
 
+    private static final String PACKAGE_NAME = "com.communitake.mdc.micronet"; // GSD Package Name.
     /**These are the Contains for ATS to trigger GSD**/
     private static final String ACTION_EXTRA_CODE = "ACTION_EXTRA_CODE";
     private static final String PIN_CODE = "PIN_CODE";
@@ -52,33 +55,74 @@ public class GSDActivity extends Activity {
 
     }
 
+    // These two variables are examine for GSD version name.
+    private int packageVersionInt = 0;
+    final static private int targetVersion = 11870; // GSD has to be newer that this to trigger the new API.
+
+    /**
+     * The reason that I place GSD checking process over here,
+     * is because ATS is a always-running app, I'd like to check for the GSD service status every time before we run into it.
+     * Just to make sure GSD service status is valid and secure.
+     * **/
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        Context context = getApplicationContext();
+        PackageManager packageManager = context.getPackageManager();
+        boolean isInstalled = isPackageInstalled(PACKAGE_NAME, packageManager);
+        if(isInstalled){
+            //Checking GSD Version Name.
+            try{
+                PackageInfo packageInfo = context.getPackageManager().getPackageInfo(PACKAGE_NAME, 0);
+                String packageName = packageInfo.versionName;
+                packageName = packageName.replace(".", "");
+                packageVersionInt = new Integer(packageName);
+                Log.d(TAG, "Package Version Int: " + packageVersionInt);
+            }catch(Exception e){
+                Log.d(TAG, "GSD Version Detection Error: " +e);
+            }
+        }else{
+            finish();
+            Log.d(TAG, "Manage Package Not Found, GSD Activity Ended");
+        }
 
         String intentActionCode = getIntent().getStringExtra(ACTION_EXTRA_CODE);
         Log.d(TAG, "intentActionCode: " + intentActionCode);
 
         if(intentActionCode != null){
-            switch(intentActionCode){
-                case GSD_ACTION_SYNC_NOW:
-                    doSync(this);
-                    break;
-                case GSD_ACTION_CHEKC_STATE:
+            if(packageVersionInt > targetVersion) {
+                Log.d(TAG, "New version GSD Manage");
+                switch (intentActionCode) {
+                    case GSD_ACTION_SYNC_NOW:
+                        doSync(this);
+                        break;
+                    case GSD_ACTION_CHEKC_STATE:
 
-                    Intent outGoingintent = new Intent(ACTION_REGISTER_STATE);
-                    startActivityForResult(outGoingintent, REQUEST_CODE_REGISTER_STATUS);
-                    android.util.Log.d(TAG, "register intent sent: " + outGoingintent + outGoingintent.getAction() + outGoingintent.getExtras());
-                    break;
-                case GSD_ACTION_DO_REGISTER:
+                        Intent outGoingintent = new Intent(ACTION_REGISTER_STATE);
+                        startActivityForResult(outGoingintent, REQUEST_CODE_REGISTER_STATUS);
+                        android.util.Log.d(TAG, "register intent sent: " + outGoingintent + outGoingintent.getAction() + outGoingintent.getExtras());
+                        break;
+                    case GSD_ACTION_DO_REGISTER:
 
-                    String pinCode = getIntent().getStringExtra(PIN_CODE);
-                    outGoingintent = new Intent(ACTION_DO_REGISTER);
-                    outGoingintent.putExtra(PINCODE_KEY, pinCode);
+                        String pinCode = getIntent().getStringExtra(PIN_CODE);
+                        outGoingintent = new Intent(ACTION_DO_REGISTER);
+                        outGoingintent.putExtra(PINCODE_KEY, pinCode);
 
-                    startActivityForResult(outGoingintent, REQUEST_CODE_DO_REGISTER);
+                        startActivityForResult(outGoingintent, REQUEST_CODE_DO_REGISTER);
 
-                    break;
+                        break;
+                }
+            }else{
+                //Handling the old GSD version(<=11.8.70)
+                Log.d(TAG, "This is an old version GSD Manage");
+                Intent intent3rd = new Intent(BROADCAST_ACTION_3RD);
+                intent3rd.setAction(ACTION_THIRDPARTY_BROADCAST);
+                intent3rd.putExtra("sync", true);
+                intent3rd.setClassName(PACKAGE_NAME, "com.communitake.mdc.externalapi.ThirdPartyReceiver");
+                context.sendBroadcast(intent3rd);
+                Log.d(TAG, "Old Intent Sent");
+                finish();
             }
         }
     }
@@ -131,9 +175,24 @@ public class GSDActivity extends Activity {
         this.finish();
     }
 
+    /**
+     * Checking if targeted package exists in the device.
+     * **/
+    private boolean isPackageInstalled(String packageName, PackageManager packageManager){
+
+        try{
+            packageManager.getPackageInfo(packageName, 0);
+            Log.d(TAG, "Package: " + packageName + " FOUND.");
+            return true;
+        }catch(PackageManager.NameNotFoundException e){
+            Log.d(TAG, "Package: " + packageName + " NOT FOUND. " + e);
+            return false;
+        }
+    }
     @Override
     protected void onDestroy() {
         super.onDestroy();
     }
+
 
 }
